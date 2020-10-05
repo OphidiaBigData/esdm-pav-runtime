@@ -88,5 +88,7 @@ This product includes software developed by the OpenSSL Project for use in the O
 <b>Acknowledgement</b>:</br>
 This software has been also supported by:
 
-- the Horizon 2020 Framework Programme through the INDIGO-DataCloud Project, RIA-653549
+- the *[ESiWACE2](http://www.esiwace.eu)* project: the *Centre of Excellence in Simulation of Weather and Climate in Europe phase 2*. ESiWACE2 has received funding from the European Union’s Horizon 2020 research and innovation programme under grant agreement No. 823988.
+
+- the Horizon 2020 Framework Programme through the INDIGO-DataCloud Project, RIA-653549 (Ophidia Server)
 

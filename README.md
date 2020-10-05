@@ -1,4 +1,8 @@
-# Ophidia Server
+# ESDM PAV Runtime 
+
+**Note**:
+
+This is a fork of the [Ophidia Server](https://github.com/OphidiaBigData/ophidia-server)
 
 ### Description
 
@@ -23,6 +27,7 @@ In order to compile and run the Ophidia Server, make sure you have the following
 11. globus-gssapi-gsi-devel (only for GSI support)
 12. voms-devel (only for GSI support)
 13. GNU libmatheval (only for selection statement and advanced management of run-time variables)
+14. sqlite and sqlite-devel
 
 **Note**:
 
