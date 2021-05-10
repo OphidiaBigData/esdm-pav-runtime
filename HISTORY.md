@@ -1,4 +1,10 @@
 
+## Next release
+
+### Added:
+
+- New argument 'WORKING_DIR' in main configuration file
+
 ## v1.0.0 - 2020-10-01
 
 - Initial package release. The version includes:
@@ -9,3 +15,4 @@
   - SQLite-based internal catalog for task status management
 
 NOTE: This repo has been forked from the ophidia-server. 
+

@@ -1,6 +1,6 @@
 /*
     Ophidia Server
-    Copyright (C) 2012-2020 CMCC Foundation
+    Copyright (C) 2012-2021 CMCC Foundation
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -72,6 +72,10 @@ int oph_workflow_free(oph_workflow * workflow)
 	if (workflow->new_token) {
 		free(workflow->new_token);
 		workflow->new_token = NULL;
+	}
+	if (workflow->project) {
+		free(workflow->project);
+		workflow->project = NULL;
 	}
 	if (workflow->cube) {
 		free(workflow->cube);
@@ -523,6 +527,8 @@ int oph_workflow_copy_task(oph_workflow_task * s, oph_workflow_task * d, int suf
 			return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 	}
 	if (s->operator && ! ((d->operator = strdup(s->operator))))
+		return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+	if (s->type && !((d->type = strdup(s->type))))
 		return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 	if (s->arguments_keys) {
 		d->arguments_keys = (char **) calloc(s->arguments_num, sizeof(char *));

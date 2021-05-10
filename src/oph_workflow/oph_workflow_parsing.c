@@ -1,6 +1,6 @@
 /*
     Ophidia Server
-    Copyright (C) 2012-2020 CMCC Foundation
+    Copyright (C) 2012-2021 CMCC Foundation
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -82,10 +82,10 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 
 	//unpack global vars
 	char *name = NULL, *author = NULL, *abstract = NULL, *sessionid = NULL, *exec_mode = NULL, *ncores = NULL, *cwd = NULL, *cdd = NULL, *cube = NULL, *callback_url = NULL, *on_error =
-	    NULL, *command = NULL, *on_exit = NULL, *run = NULL, *output_format = NULL, *host_partition = NULL, *url = NULL, *nhosts = NULL, *nthreads = NULL;
-	json_unpack(jansson, "{s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s}", "name", &name, "author", &author, "abstract", &abstract, "sessionid", &sessionid,
+	    NULL, *command = NULL, *on_exit = NULL, *run = NULL, *output_format = NULL, *host_partition = NULL, *url = NULL, *nhosts = NULL, *nthreads = NULL, *project = NULL;
+	json_unpack(jansson, "{s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s,s?s}", "name", &name, "author", &author, "abstract", &abstract, "sessionid", &sessionid,
 		    "exec_mode", &exec_mode, "ncores", &ncores, "cwd", &cwd, "cdd", &cdd, "cube", &cube, "callback_url", &callback_url, "on_error", &on_error, "command", &command, "on_exit", &on_exit,
-		    "run", &run, "output_format", &output_format, "host_partition", &host_partition, "url", &url, "nhost", &nhosts, "nthreads", &nthreads);
+		    "run", &run, "output_format", &output_format, "host_partition", &host_partition, "url", &url, "nhost", &nhosts, "nthreads", &nthreads, "project", &project);
 
 	//add global vars
 	if (!name || !author || !abstract) {
@@ -155,6 +155,16 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 		(*workflow)->nhosts = (int) strtol((const char *) nhosts, NULL, 10);
 	if (nthreads)
 		(*workflow)->nthreads = (int) strtol((const char *) nthreads, NULL, 10);
+	if (project && strlen(project)) {
+		(*workflow)->project = (char *) strdup((const char *) project);
+		if (!((*workflow)->project)) {
+			oph_workflow_free(*workflow);
+			if (jansson)
+				json_decref(jansson);
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "error allocating project\n");
+			return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+		}
+	}
 	if (cwd && strlen(cwd)) {
 		(*workflow)->cwd = (char *) strdup((const char *) cwd);
 		if (!((*workflow)->cwd)) {
@@ -329,7 +339,7 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 			return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 		}
 		if (type) {
-			if (strcmp(type, "ophidia") && strcmp(type, "cdo") && strcmp(type, "generic")) {
+			if (strcmp(type, "ophidia") && strcmp(type, "cdo") && strcmp(type, "generic") && strcmp(type, "control")) {
 				oph_workflow_free(*workflow);
 				if (jansson)
 					json_decref(jansson);
@@ -337,6 +347,18 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 				return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 			}
 			(*workflow)->tasks[i].type = (char *) strdup((const char *) type);
+			if (!strcmp(type, "control")) {
+				char tmp[5 + strlen((*workflow)->tasks[i].operator)];
+				sprintf(tmp, "oph_%s", (*workflow)->tasks[i].operator);
+				if (strcmp(tmp, OPH_OPERATOR_FOR) && strcmp(tmp, OPH_OPERATOR_ENDFOR) && strcmp(tmp, OPH_OPERATOR_IF) && strcmp(tmp, OPH_OPERATOR_ELSEIF)
+				    && strcmp(tmp, OPH_OPERATOR_ELSE) && strcmp(tmp, OPH_OPERATOR_ENDIF)) {
+					oph_workflow_free(*workflow);
+					if (jansson)
+						json_decref(jansson);
+					pmesg(LOG_ERROR, __FILE__, __LINE__, "error setting task: operation not allowed\n");
+					return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
+				}
+			}
 		} else
 			(*workflow)->tasks[i].type = (char *) strdup("ophidia");
 		if (!((*workflow)->tasks[i].type)) {
@@ -731,6 +753,12 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 			return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
 		}
 	}
+	//project
+	if ((*workflow)->project && _oph_workflow_substitute_var("project", (*workflow)->project, (*workflow)->tasks, (*workflow)->tasks_num)) {
+		oph_workflow_free(*workflow);
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "error substituting project\n");
+		return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
+	}
 	//cwd
 	if (!(*workflow)->cwd)
 		(*workflow)->cwd = strdup(OPH_WORKFLOW_ROOT_FOLDER);
@@ -789,6 +817,20 @@ int oph_workflow_load(char *json_string, const char *username, const char *ip_ad
 
 			free((*workflow)->tasks[i].type);
 			(*workflow)->tasks[i].type = strdup("ophidia");
+
+		} else if (!strcmp((*workflow)->tasks[i].type, "control")) {
+
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "Found operator: %s %s\n", (*workflow)->tasks[i].type, (*workflow)->tasks[i].operator);
+			if (asprintf(&tmp, "oph_%s", (*workflow)->tasks[i].operator) <= 0) {
+				oph_workflow_free(*workflow);
+				pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to allocate operator name\n");
+				return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+			}
+			free((*workflow)->tasks[i].operator);
+			(*workflow)->tasks[i].operator = tmp;
+
+			free((*workflow)->tasks[i].type);
+			(*workflow)->tasks[i].type = strdup("ophidia");
 		}
 	}
 
@@ -830,6 +872,8 @@ int oph_workflow_store(oph_workflow * workflow, char **jstring)
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 	snprintf(jsontmp, OPH_WORKFLOW_MIN_STRING, "%d", workflow->nthreads);
 	if (_oph_workflow_add_to_json(request, "nthreads", jsontmp))
+		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
+	if (workflow->project && _oph_workflow_add_to_json(request, "project", workflow->project))
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 	if (_oph_workflow_add_to_json(request, "on_error", workflow->on_error))
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
@@ -1041,6 +1085,7 @@ int _oph_workflow_alloc(oph_workflow ** workflow)
 	(*workflow)->host_partition = NULL;
 	(*workflow)->client_address = NULL;
 	(*workflow)->new_token = NULL;
+	(*workflow)->project = NULL;
 
 	struct timeval tv;
 	gettimeofday(&tv, 0);
