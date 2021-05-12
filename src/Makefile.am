@@ -16,7 +16,7 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-bin_PROGRAMS=oph_client oph_server oph_manage_user
+bin_PROGRAMS=esdm_pav_runtime
 bindir=${prefix}/bin
 
 ADDITIONAL_CFLAGS = -I$(INTERFACE_TYPE) $(LIBSSL_INCLUDE) -DOPH_SERVER_LOCATION=\"${prefix}\" $(OPT) -DCOMMAND_TO_JSON -DLEVEL1
@@ -338,20 +338,10 @@ endif
 
 lib_LTLIBRARIES = $(LIBRARY)
 
-oph_client_SOURCES= $(INTERFACE_TYPE)/oph_client.c
-oph_client_CFLAGS= $(OPT) -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYCFLAGS)
-oph_client_LDFLAGS= $(MYLDFLAGS)
-oph_client_LDADD= $(ADDITIONAL_LIBS) -L. -lsoapClient -lstdsoap2 -ldebug
-
-oph_server_SOURCES= $(INTERFACE_TYPE)/oph_server.c
-oph_server_CFLAGS= $(OPT) -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) -Ioph_workflow $(MYSQL_CFLAGS) $(MYCFLAGS_THREADS)
-oph_server_LDFLAGS= $(MYLDFLAGS_THREADS)
-oph_server_LDADD= $(ADDITIONAL_LIBS) ${MYSQL_LDFLAGS} -L. -lsoapServer -lstdsoap2 -lutils -loph_ophidiadb -loph_auth -loph_task_parser_library -lhashtbl -loph_service_info -loph_odb_job -ldebug -lthreads -loph_plugin -loph_rmanager -loph_notify -loph_known_operators -loph_execute_main -loph_job_list -loph_workflow_engine
-
-oph_manage_user_SOURCES= oph_manage_user.c
-oph_manage_user_CFLAGS= $(OPT) -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYSQL_CFLAGS) $(MYCFLAGS)
-oph_manage_user_LDFLAGS= $(GLOBUS_BASIC)
-oph_manage_user_LDADD= $(ADDITIONAL_LIBS) ${MYSQL_LDFLAGS} -L. -ldebug -loph_parser -lhashtbl -loph_ophidiadb -loph_auth
+esdm_pav_runtime_SOURCES= $(INTERFACE_TYPE)/oph_server.c
+esdm_pav_runtime_CFLAGS= $(OPT) -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) -Ioph_workflow $(MYSQL_CFLAGS) $(MYCFLAGS_THREADS)
+esdm_pav_runtime_LDFLAGS= $(MYLDFLAGS_THREADS)
+esdm_pav_runtime_LDADD= $(ADDITIONAL_LIBS) ${MYSQL_LDFLAGS} -L. -lsoapServer -lstdsoap2 -lutils -loph_ophidiadb -loph_auth -loph_task_parser_library -lhashtbl -loph_service_info -loph_odb_job -ldebug -lthreads -loph_plugin -loph_rmanager -loph_notify -loph_known_operators -loph_execute_main -loph_job_list -loph_workflow_engine
 
 clean-local:
 	-rm -f *~ oph_json/*~ oph_workflow/*~ $(INTERFACE_TYPE)/*~
@@ -359,16 +349,3 @@ clean-local:
 distclean-local:
 	-rm -f *~ oph_json/*~ oph_workflow/*~ $(INTERFACE_TYPE)/*~
 
-install-exec-hook:
-	mkdir -p wsdl && \
-	cd wsdl && \
-	cat ../oph_types.h > oph_wsdl.h && \
-	echo "//gsoap oph service location:      ${PLUGIN_DEFAULT_PROTOCOL}://${PLUGIN_DEFAULT_HOSTNAME}:${PLUGIN_DEFAULT_PORT}/" >> oph_wsdl.h && \
-	cat ../oph_execute_main.h >> oph_wsdl.h && \
-	$(SOAPCPP2_PROG) -c -x oph_wsdl.h && \
-	cp -f *.wsdl $(OPH_WEB_SERVER_LOCATION)/ && \
-	mv -f *.wsdl $(DESTDIR)$(sysconfdir)
-	rm -rf wsdl
-
-uninstall-local:
-	rm $(DESTDIR)$(sysconfdir)/oph.wsdl

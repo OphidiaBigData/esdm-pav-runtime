@@ -16,8 +16,8 @@
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-TESTS=oph_server_test
-check_PROGRAMS=oph_server_test
+TESTS=esdm_pav_runtime_test
+check_PROGRAMS=esdm_pav_runtime_test
 
 ADDITIONAL_CFLAGS = -I../src/$(INTERFACE_TYPE) $(LIBSSL_INCLUDE) -DOPH_SERVER_LOCATION=\"${prefix}\" $(OPT) -DCOMMAND_TO_JSON -DLEVEL1
 ADDITIONAL_LIBS = -lm -lpthread
@@ -303,10 +303,10 @@ endif
 
 check_LTLIBRARIES = $(LIBRARY)
 
-oph_server_test_SOURCES= oph_server_test.c
-oph_server_test_CFLAGS= $(OPT) -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) -I../src -I../src/oph_workflow $(MYSQL_CFLAGS) $(MYCFLAGS_THREADS) $(CODE_COVERAGE_CFLAGS)
-oph_server_test_LDFLAGS= $(MYLDFLAGS_THREADS) $(CODE_COVERAGE_LDLAGS)
-oph_server_test_LDADD= $(ADDITIONAL_LIBS) ${MYSQL_LDFLAGS} -L. -ldebug -loph_known_operators
+esdm_pav_runtime_test_SOURCES= oph_server_test.c
+esdm_pav_runtime_test_CFLAGS= $(OPT) -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) -I../src -I../src/oph_workflow $(MYSQL_CFLAGS) $(MYCFLAGS_THREADS) $(CODE_COVERAGE_CFLAGS)
+esdm_pav_runtime_test_LDFLAGS= $(MYLDFLAGS_THREADS) $(CODE_COVERAGE_LDLAGS)
+esdm_pav_runtime_test_LDADD= $(ADDITIONAL_LIBS) ${MYSQL_LDFLAGS} -L. -ldebug -loph_known_operators
 
 clean-local:
 	-rm -f *~ *.trs
