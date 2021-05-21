@@ -492,7 +492,7 @@ OPH_AAA_SUPPORT=$aaa
 AC_SUBST(OPH_AAA_SUPPORT)
 
 OPH_DB_SUPPORT=
-AC_ARG_ENABLE(db, [ --disable-db	Disable Ophidia DB support. (Enabled by default)], [ db="no" ], [ db="yes" ])
+AC_ARG_ENABLE(db, [ --enable-db	Enable Ophidia DB support. (Disabled by default)], [ db="yes" ], [ db="no" ])
 if test "x$db" = "xyes"; then
 	AC_MSG_NOTICE(Ophidia DB enabled)
 else

@@ -18,8 +18,8 @@
 
 -- Use:
 --
--- > sqlite ophidiadb
--- sqlite> .read ophidiadb.sql
+-- > sqlite esdm-pav-runtime-db
+-- sqlite> .read esdm-pav-runtime-db.sql
 
 CREATE TABLE `country` (
 	idcountry INTEGER PRIMARY KEY NOT NULL,
