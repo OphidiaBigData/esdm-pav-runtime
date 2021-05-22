@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE operator SYSTEM "ophidiaoperator.dtd">
+<operator name="OPH_INSTANCES" version="1.0">
+    <info>
+        <abstract>[Type]
+Metadata Access.
+
+[Behaviour]
+It shows information about host partitions, hosts and dbms instances.
+
+[Parameters]
+- action : command type; use
+           &quot;read&quot; to access information (default),
+           &quot;add&quot; to create user-defined host partitions,
+           &quot;remove&quot; to remove user-defined host partitions.
+- level : show hosts with "1", DBMS instances with "2" or host partitions with "3".
+- host_filter : in &quot;read&quot; mode it is an optional filter on host name and can be used only with level 2.
+                In &quot;add&quot; or &quot;remove&quot; mode it is the list of host identifiers to be grouped in the user-defined partition.
+- nhost : in &quot;add&quot; or &quot;remove&quot; mode it is the number of hosts to be grouped in the user-defined partition.
+          If it is non-zero then &quot;host_filter&quot; is negleted.
+- host_partition : in &quot;read&quot; mode it is an optional filter on host partition name and can be used only with level 3.
+                   If no partition is specified, then the list of all partitions is shown.
+                   In &quot;add&quot; mode it is the name of the new partition.
+                   In &quot;remove&quot; mode it is the name of the partition to be removed.
+- ioserver_filter : optional filter on the type of I/O server used. Used only with level 2:
+				       &quot;mysql_table&quot; for MySQL I/O servers only,
+				       &quot;ophidiaio_memory&quot; for Ophidia I/O servers only,
+				       &quot;all&quot; (default) for all disks.
+- host_status : optional filter on the status of I/O nodes:
+				       &quot;up&quot; for up hosts only,
+				       &quot;down&quot; for down hosts only,
+				       &quot;all&quot; (default) for all hosts.
+
+[System parameters]    
+- exec_mode : operator execution mode. Possible values are async (default) for
+              asynchronous mode, sync for synchronous mode with json-compliant output.
+- ncores : number of parallel processes to be used (min. 1).
+           This operator is not parallel, so the only possible value is 1.
+- sessionid : session identifier used server-side to manage sessions and jobs.
+              Usually users don't need to use/modify it, except when it is necessary
+              to create a new session or switch to another one.
+- objkey_filter : filter on the output of the operator written to file (default=all => no filter, none => no output).
+                  instances : show operator's output table.
+                  instances_summary : show operator's output table with summary.
+
+[Examples]
+Show all information about hosts and dbms instances :
+OPH_TERM: oph_instances level=2;host_filter=all;
+SUBMISSION STRING: &quot;operator=oph_instances;level=2;host_filter=all;&quot;</abstract>
+        <author>CMCC Foundation</author>
+        <category>Administration</category>
+        <creationdate>27/07/2013</creationdate>
+        <license url="http://www.gnu.org/licenses/gpl.txt">GPLv3</license>
+        <permission>write</permission>
+    </info>
+    <args>
+		<argument type="string" mandatory="no" default="read" values="read|add|remove">action</argument>
+		<argument type="int" mandatory="no" minvalue="1" maxvalue="3" values="1|2|3" default="1">level</argument>
+		<argument type="string" mandatory="no" default="all">host_filter</argument>
+		<argument type="int" mandatory="no" minvalue="0" default="0">nhost</argument>
+		<argument type="string" mandatory="no" default="all">host_partition</argument>
+		<argument type="string" mandatory="no" default="all" values="mysql_table|ophidiaio_memory|all">ioserver_filter</argument>
+		<argument type="string" mandatory="no" default="all" values="up|down|all">host_status</argument>
+		<argument type="string" mandatory="no" default="async" values="async|sync">exec_mode</argument>
+		<argument type="string" mandatory="no" default="null">sessionid</argument>
+		<argument type="int" mandatory="no" default="1" minvalue="1" maxvalue="1">ncores</argument>
+		<argument type="string" mandatory="no" default="all" values="all|none|instances|instances_summary">objkey_filter</argument>
+    </args>
+</operator>

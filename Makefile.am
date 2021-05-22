@@ -22,8 +22,6 @@ ACLOCAL_AMFLAGS = -I m4
 
 SUBDIRS = . src test
 
-include_HEADERS = src/oph_types.h src/oph_execute_main.h
-
 sysconf_DATA = etc/*.conf etc/oph_server_logrotate
 
 bindir=${prefix}/etc
@@ -32,26 +30,29 @@ bin_SCRIPTS = etc/oph_server
 scriptdir=${prefix}/etc/script
 dist_script_SCRIPTS = etc/script/*.sh
 
-certdir = $(prefix)/etc/cert/
-dist_cert_DATA =
+certdir = $(prefix)/etc/cert
+dist_cert_DATA = .empty
 
-logdir = $(prefix)/log/
-dist_log_DATA =
+logdir = $(prefix)/log
+dist_log_DATA = .empty
 
-xmldir = $(prefix)/etc/xml/
-dist_xml_DATA = etc/xml/*.xml
+xmloperdir = $(prefix)/etc/operators_xml
+dist_xmloper_DATA = etc/operators_xml/*.xml
 
-dtddir = $(prefix)/etc/dtd/
+dtddir = $(prefix)/etc/dtd
 dist_dtd_DATA = etc/dtd/*.dtd
 
-rmsdir = $(prefix)/etc/rms/
+rmsdir = $(prefix)/etc/rms
 dist_rms_DATA = etc/rms/*.conf
 
-sessionsdir = $(OPH_WEB_SERVER_LOCATION)/sessions/
-dist_sessions_DATA =
+pxmloperdir = $(OPH_WEB_SERVER_LOCATION)/operators_xml
+dist_pxmloper_DATA = etc/operators_xml/*.xml
+
+sessionsdir = $(OPH_WEB_SERVER_LOCATION)/sessions
+dist_sessions_DATA = .empty
 
 if OPH_WEB_ACCESS
-webdir = $(OPH_WEB_SERVER_LOCATION)/
+webdir = $(OPH_WEB_SERVER_LOCATION)
 dist_web_DATA = etc/web/*.php etc/web/style.css etc/web/.htaccess
 endif
 
@@ -62,8 +63,8 @@ CODE_COVERAGE_IGNORE_PATTERN = "*oph_server_test*"
 @CODE_COVERAGE_RULES@
 
 clean-local:
-	-rm -f *~ authz/*~ etc/*~ etc/cert/*~ etc/dtd/*~ etc/rms/*~ etc/xml/*~
+	-rm -f *~ authz/*~ etc/*~ etc/cert/*~ etc/dtd/*~ etc/rms/*~ etc/operators_xml/*~
 
 distclean-local:
-	-rm -f *~ authz/*~ etc/*~ etc/cert/*~ etc/dtd/*~ etc/rms/*~ etc/xml/*~
+	-rm -f *~ authz/*~ etc/*~ etc/cert/*~ etc/dtd/*~ etc/rms/*~ etc/operators_xml/*~
 

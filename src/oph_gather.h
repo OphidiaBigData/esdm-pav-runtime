@@ -175,8 +175,8 @@
 #define OPH_COMMON_AUTO "auto"
 
 // Internal XML
-#define OPH_SERVER_XML_PATH "%s/etc/xml"
-#define OPH_SERVER_XML_FILE "%s/etc/xml/%s"
+#define OPH_SERVER_XML_PATH "%s/etc/operators_xml"
+#define OPH_SERVER_XML_FILE "%s/etc/operators_xml/%s"
 #define OPH_SERVER_DTD_SCHEMA "%s/etc/dtd/ophidiaoperator.dtd"
 // External XML
 #define OPH_SERVER_XML_EXT_PATH "/usr/local/ophidia/oph-cluster/oph-analytics-framework/etc/operators_xml"
