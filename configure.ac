@@ -279,7 +279,7 @@ AC_ARG_WITH(web_server_url,
 		web_server_url="$withval"
 	   ],
 	   [
-		web_server_url="http://127.0.0.1/ophidia"
+		web_server_url="http://127.0.0.1"
 	   ])
 OPH_WEB_SERVER=${web_server_url}
 AC_SUBST(OPH_WEB_SERVER)
