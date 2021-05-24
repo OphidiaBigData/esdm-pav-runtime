@@ -360,14 +360,14 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 		pthread_mutex_unlock(&global_flag);
 
 	} else {
-
 		result = OPH_SERVER_OK;
-		free(userid);
 		userid = strdup(OPH_SUBM_USER);
+		free_userid = 1;
 	}
 
 	if (!result && actual_userid) {
-		free(userid);
+		if (userid)
+			free(userid);
 		userid = strdup(actual_userid);
 		pmesg(LOG_DEBUG, __FILE__, __LINE__, "R%d: the username will be '%s'\n", jobid, userid);
 	}
