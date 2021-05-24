@@ -22,7 +22,7 @@ ACLOCAL_AMFLAGS = -I m4
 
 SUBDIRS = . src test
 
-sysconf_DATA = etc/*.conf etc/oph_server_logrotate
+sysconf_DATA = etc/*.conf etc/oph_server_logrotate etc/esdm-pav-runtime-db.sql
 
 bindir=${prefix}/etc
 bin_SCRIPTS = etc/oph_server
