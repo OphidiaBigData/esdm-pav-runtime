@@ -32,7 +32,9 @@
 #include <pthread.h>
 #endif
 #include <signal.h>
+#ifdef OPH_DB_SUPPORT
 #include <mysql.h>
+#endif
 
 #define OPH_STATUS_LOG_PERIOD 1
 #define OPH_STATUS_LOG_HYSTERESIS_PERIOD 2
@@ -467,8 +469,9 @@ void cleanup()
 		fclose(task_logfile);
 		task_logfile = NULL;
 	}
-
+#ifdef OPH_DB_SUPPORT
 	mysql_library_end();
+#endif
 	soap_destroy(psoap);
 	soap_end(psoap);
 	soap_done(psoap);
@@ -651,11 +654,12 @@ int main(int argc, char *argv[])
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "A problem occurred while setting up signal dispositions\n");
 		exit(1);
 	}
-
+#ifdef OPH_DB_SUPPORT
 	if (mysql_library_init(0, 0, 0)) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "Cannot setup MySQL\n");
 		exit(1);
 	}
+#endif
 
 	oph_tp_start_xml_parser();
 	if (CRYPTO_thread_setup()) {
@@ -759,7 +763,9 @@ void *process_request(struct soap *soap)
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 	oph_service_info_thread_decr(service_info);
+#ifdef OPH_DB_SUPPORT
 	mysql_thread_end();
+#endif
 #endif
 
 	return (void *) NULL;
@@ -1107,7 +1113,9 @@ void *status_logger(struct soap *soap)
 
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
 	oph_service_info_thread_decr(service_info);
+#ifdef OPH_DB_SUPPORT
 	mysql_thread_end();
+#endif
 #endif
 
 	return (void *) NULL;
