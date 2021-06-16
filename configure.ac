@@ -502,6 +502,28 @@ AM_CONDITIONAL([DB_SUPPORT], [test "x$db" = "xyes"])
 OPH_DB_SUPPORT=$db
 AC_SUBST(OPH_DB_SUPPORT)
 
+MULTI_NODE_SUPPORT=
+AC_ARG_ENABLE(multi_node, [ --enable-multi_node	Enable multi node support. (Disabled by default)], [ multi_node="yes" ], [ multi_node="no" ])
+if test "x$multi_node" = "xyes"; then
+	AC_MSG_NOTICE(MULTI_NODE enabled)
+else
+	AC_MSG_NOTICE(MULTI_NODE disabled)
+fi
+AM_CONDITIONAL([MULTI_NODE], [test "x$multi_node" = "xyes"])
+MULTI_NODE_SUPPORT=$multi_node
+AC_SUBST(MULTI_NODE_SUPPORT)
+
+MULTI_RABBITMQ_CONN_SUPPORT=
+AC_ARG_ENABLE(multiple_connections, [ --enable-multiple_connections  Enable multiple RabbitMQ connection support. (Disabled by default)], [ multiple_connections="yes" ], [ multiple_connections="no" ])
+if test "x$multiple_connections" = "xyes"; then
+	AC_MSG_NOTICE(MULTI_RABBITMQ_CONN enabled)
+else
+	AC_MSG_NOTICE(MULTI_RABBITMQ_CONN disabled)
+fi
+AM_CONDITIONAL([MULTI_RABBITMQ_CONN], [test "x$multiple_connections" = "xyes"])
+MULTI_RABBITMQ_CONN_SUPPORT=$multiple_connections
+AC_SUBST(MULTI_RABBITMQ_CONN_SUPPORT)
+
 if test "x$db" = "xno"; then
 	PKG_CHECK_MODULES(SQLITE, sqlite3 >= 3.7.11)
 	AC_ARG_WITH(sqlite_header_path,
@@ -525,6 +547,28 @@ if test "x$db" = "xno"; then
 	SQLITE_LIB="$sqlite_lib_path"
 	AC_SUBST(SQLITE_LIB)
 fi
+
+PKG_CHECK_MODULES(LIBRABBITMQ, librabbitmq >= 0.10.0)
+AC_ARG_WITH(librabbitmq_header_path,
+		[ --with-librabbitmq-header-path=PATH Location of librabbitmq include directory],
+		[
+				librabbitmq_header_path="$withval"
+		],
+		[
+				librabbitmq_header_path="$LIBRABBITMQ_CFLAGS"
+		])
+AC_ARG_WITH(librabbitmq_lib_path,
+		[ --with-librabbitmq-lib-path=PATH Location of librabbitmq lib],
+		[
+				librabbitmq_lib_path="$withval"
+		],
+		[
+				librabbitmq_lib_path="$LIBRABBITMQ_LIBS"
+		])
+RABBITMQ_INCLUDE="$librabbitmq_header_path"
+AC_SUBST(RABBITMQ_INCLUDE)
+RABBITMQ_LIB="$librabbitmq_lib_path"
+AC_SUBST(RABBITMQ_LIB)
 
 case "${host}" in
         *-*-solaris*)   PLATFORM=SUN_OS

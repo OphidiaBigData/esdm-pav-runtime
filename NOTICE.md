@@ -80,6 +80,10 @@ https://github.com/cisco/cjose/blob/master/LICENSE
 Public domain license</br>
 https://www.sqlite.org/index.html
 
+- rabbitmq-c<br>
+Public domain license</br>
+https://github.com/alanxz/rabbitmq-c/blob/master/LICENSE-MIT
+
 <b>Note</b>:</br>
 This product includes software developed by the OpenSSL Project for use in the OpenSSL Toolkit.
 

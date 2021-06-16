@@ -19,6 +19,10 @@
 bin_PROGRAMS=esdm_pav_runtime
 bindir=${prefix}/bin
 
+if MULTI_NODE
+bin_PROGRAMS += esdm_pav_runtime_worker
+endif
+
 ADDITIONAL_CFLAGS = -I$(INTERFACE_TYPE) $(LIBSSL_INCLUDE) -DOPH_SERVER_LOCATION=\"${prefix}\" $(OPT) -DCOMMAND_TO_JSON -DLEVEL1
 ADDITIONAL_LIBS = -lm -lpthread
 
@@ -126,6 +130,15 @@ ADDITIONAL_CFLAGS += -DMATHEVAL_SUPPORT $(MATHEVAL_CFLAGS)
 ADDITIONAL_LIBS += $(MATHEVAL_LIBS)
 endif
 
+if MULTI_NODE
+ADDITIONAL_CFLAGS += $(RABBITMQ_INCLUDE) -DMULTI_NODE_SUPPORT
+ADDITIONAL_LIBS += $(RABBITMQ_LIB)
+
+if MULTI_RABBITMQ_CONN
+ADDITIONAL_CFLAGS += -DMULTI_RABBITMQ_CONN_SUPPORT
+endif
+endif
+
 LIBRARY =
 
 LIBRARY += libhashtbl.la
@@ -212,11 +225,29 @@ liboph_auth_la_CFLAGS = -prefer-pic -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYS
 liboph_auth_la_LDFLAGS = -shared $(OPENID_LDFLAGS) $(AAA_LDFLAGS)
 liboph_auth_la_LIBADD = $(ADDITIONAL_LIBS) $(OPENID_LIBS) $(AAA_LIBS) -L. -loph_ophidiadb -loph_parser -loph_service_info -lhashtbl
 
+if MULTI_NODE
+LIBRARY += librabbitmq_utils.la
+librabbitmq_utils_la_SOURCES = rabbitmq_utils.c
+librabbitmq_utils_la_CFLAGS = -prefer-pic -I. $(ADDITIONAL_CFLAGS)
+librabbitmq_utils_la_LDFLAGS = -shared $(OPENID_LDFLAGS) $(AAA_LDFLAGS)
+librabbitmq_utils_la_LIBADD = $(ADDITIONAL_LIBS) $(OPENID_LIBS) $(AAA_LIBS) -L. -ldebug 
+
+LIBRARY += liboph_server_conf.la
+liboph_server_conf_la_SOURCES = oph_server_confs.c
+liboph_server_conf_la_CFLAGS = -prefer-pic -I. $(ADDITIONAL_CFLAGS)
+liboph_server_conf_la_LDFLAGS = -shared $(OPENID_LDFLAGS) $(AAA_LDFLAGS)
+liboph_server_conf_la_LIBADD = $(ADDITIONAL_LIBS) $(OPENID_LIBS) $(AAA_LIBS) -L. -ldebug -lhashtbl
+endif
+
 LIBRARY += liboph_ssh_submit.la
 liboph_ssh_submit_la_SOURCES = oph_ssh_submit.c
 liboph_ssh_submit_la_CFLAGS = -prefer-pic -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) ${LIBSSH2_CFLAGS}
 liboph_ssh_submit_la_LDFLAGS = -shared
-liboph_ssh_submit_la_LIBADD = $(ADDITIONAL_LIBS) ${LIBSSH2_LIBS}
+if MULTI_NODE
+liboph_ssh_submit_la_LIBADD = $(ADDITIONAL_LIBS) ${LIBSSH2_LIBS} -L. -lhashtbl -loph_server_conf -lrabbitmq_utils 
+else
+liboph_ssh_submit_la_LIBADD = $(ADDITIONAL_LIBS) ${LIBSSH2_LIBS} -L.
+endif
 
 LIBRARY += liboph_rmanager.la
 liboph_rmanager_la_SOURCES = oph_rmanager.c
@@ -349,7 +380,18 @@ lib_LTLIBRARIES = $(LIBRARY)
 esdm_pav_runtime_SOURCES= $(INTERFACE_TYPE)/oph_server.c
 esdm_pav_runtime_CFLAGS= $(OPT) -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) -Ioph_workflow $(MYSQL_CFLAGS) $(MYCFLAGS_THREADS)
 esdm_pav_runtime_LDFLAGS= $(MYLDFLAGS_THREADS)
+if MULTI_NODE
+esdm_pav_runtime_LDADD= $(ADDITIONAL_LIBS) ${MYSQL_LDFLAGS} -L. -lsoapServer -lstdsoap2 -lutils -loph_ophidiadb -loph_auth -loph_task_parser_library -lhashtbl -loph_service_info -loph_odb_job -ldebug -lthreads -loph_plugin -loph_rmanager -loph_notify -loph_known_operators -loph_execute_main -loph_job_list -loph_workflow_engine -lrabbitmq_utils -lrabbitmq -loph_ssh_submit
+else
 esdm_pav_runtime_LDADD= $(ADDITIONAL_LIBS) ${MYSQL_LDFLAGS} -L. -lsoapServer -lstdsoap2 -lutils -loph_ophidiadb -loph_auth -loph_task_parser_library -lhashtbl -loph_service_info -loph_odb_job -ldebug -lthreads -loph_plugin -loph_rmanager -loph_notify -loph_known_operators -loph_execute_main -loph_job_list -loph_workflow_engine
+endif
+
+if MULTI_NODE
+esdm_pav_runtime_worker_SOURCES = esdm_pav_runtime_worker.c
+esdm_pav_runtime_worker_CFLAGS = -I. $(ADDITIONAL_CFLAGS)
+esdm_pav_runtime_worker_LDFLAGS= $(OPENID_LDFLAGS) $(AAA_LDFLAGS)
+esdm_pav_runtime_worker_LDADD = $(ADDITIONAL_LIBS) $(OPENID_LIBS) $(AAA_LIBS) -L. -ldebug -loph_server_conf -lrabbitmq_utils
+endif
 
 clean-local:
 	-rm -f *~ oph_json/*~ oph_workflow/*~ $(INTERFACE_TYPE)/*~

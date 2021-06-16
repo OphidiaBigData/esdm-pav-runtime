@@ -97,6 +97,10 @@
 #define OPH_SERVER_CONF_AAA_TOKEN_CHECK_TIME "AAA_TOKEN_CHECK_TIME"
 #endif
 
+#ifdef MULTI_NODE_SUPPORT
+#define OPH_SERVER_CONF_RABBIT "RABBIT_CONFIGURATION"
+#endif
+
 // Security
 #define OPH_SERVER_CERT "%s/etc/cert/myserver.pem"
 #define OPH_SERVER_CA "%s/etc/cert/cacert.pem"
@@ -118,6 +122,7 @@
 #define OPH_DEFAULT_PORT "11732"
 #define OPH_UNKNOWN "unknown"
 #define OPH_CONFIGURATION_FILE "%s/etc/server.conf"
+#define OPH_WORKER_CONFIGURATION_FILE OPH_SERVER_LOCATION "/etc/scheduler.conf"
 #define OPH_SERVER_TIMEOUT 3600	// sec
 #define OPH_SERVER_INACTIVITY_TIMEOUT 31536000	// sec
 #define OPH_SERVER_WORKFLOW_TIMEOUT 2592000	// sec
@@ -130,6 +135,10 @@
 #ifdef OPH_AAA_SUPPORT
 #define OPH_AAA_CATEGORY "service"
 #define OPH_AAA_NAME "ophidia"
+#endif
+
+#ifdef MULTI_NODE_SUPPORT
+#define OPH_RABBIT OPH_SERVER_LOCATION "/etc/scheduler.conf"
 #endif
 
 // RMS info

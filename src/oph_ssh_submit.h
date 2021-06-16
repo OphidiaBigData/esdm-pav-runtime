@@ -28,6 +28,11 @@
 #define OPH_LIBSSH_OK 0
 #define OPH_LIBSSH_ERROR 1
 
+#ifdef MULTI_NODE_SUPPORT
+int oph_rabbitmq_open_connection();
+int oph_rabbitmq_close_connection();
+#endif
+
 #ifdef SSH_SUPPORT
 static int waitsocket(int socket_fd, LIBSSH2_SESSION * session);
 #endif
