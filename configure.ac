@@ -17,7 +17,7 @@
 #
 
 AC_PREREQ([2.60])
-AC_INIT([ophidia-server], [1.6.1], [ophidia-info@cmcc.it])
+AC_INIT([esdm-pav-runtime], [1.0.0], [ophidia-info@cmcc.it])
 AC_CONFIG_SRCDIR([src])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_AUX_DIR([config])
@@ -65,7 +65,7 @@ AX_LIB_MYSQL([5.6])
 if test -n $HAVE_MYSQL; then
   AC_MSG_NOTICE([MySQL libraries available])
 else
-	AC_MSG_ERROR([MySQL libraries not found! Aborting configure!])
+	AC_MSG_NOTICE([MySQL libraries not found!])
 fi
 
 optimization="no"
@@ -415,7 +415,7 @@ AC_ARG_WITH(soapcpp2_path,
 if test "x${have_soapcpp2}" = "xyes"; then
 	AC_MSG_NOTICE([SoapCPP2 available.])
 else
-	AC_MSG_ERROR([SoapCPP2 not found! Aborting configure!])
+	AC_MSG_NOTICE([SoapCPP2 not found!])
 fi
 
 PKG_CHECK_MODULES(JANSSON, jansson >= 2.3)
