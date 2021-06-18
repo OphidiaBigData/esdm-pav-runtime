@@ -522,7 +522,7 @@ void cleanup()
 	pthread_cond_destroy(&termination_flag);
 	pthread_cond_destroy(&waiting_flag);
 
-#if defined(MULTI_NODE_SUPPORT) && !defined(MULTI_RABBITMQ_CONN_SUPPORT)
+#if defined(MULTI_NODE_SUPPORT)
 	pthread_mutex_destroy(&rabbitmq_flag);
 #endif
 #endif

@@ -78,15 +78,17 @@ char *master_hostname = 0;
 char *master_port = 0;
 char *thread_number_str = 0;
 
+pthread_mutex_t global_flag;
+
 void kill_threads()
 {
 	int ii;
 	for (ii = 0; ii < thread_number; ii++) {
 		if (pthread_kill(thread_cont_list[ii], SIGUSR1) != 0)
-			pmesg(LOG_ERROR, __FILE__, __LINE__, "Error on pthread_kill - Thread: %d\n", ii);
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error on pthread_kill - Thread: %d\n", ii);
 	}
 
-	pmesg(LOG_DEBUG, __FILE__, __LINE__, "All worker threads have been closed\n");
+	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "All worker threads have been closed\n");
 }
 
 void release_thread()
@@ -99,15 +101,15 @@ void release_main()
 	int ii;
 	for (ii = 0; ii < thread_number; ii++) {
 		if (pthread_join(thread_cont_list[ii], NULL) != 0)
-			pmesg(LOG_ERROR, __FILE__, __LINE__, "Error join thread %d\n", ii);
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error join thread %d\n", ii);
 	}
 
 	for (ii = 0; ii < thread_number; ii++)
 		close_rabbitmq_connection(conn_thread_consume_list[ii], (amqp_channel_t) (ii + 1));
-	pmesg(LOG_DEBUG, __FILE__, __LINE__, "All RabbitMQ connections for consume system have been closed (%d connections)\n", ii);
+	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "All RabbitMQ connections for consume system have been closed (%d connections)\n", ii);
 
 	if (oph_server_conf_unload(&hashtbl) != 0)
-		pmesg(LOG_ERROR, __FILE__, __LINE__, "Error on oph_server_conf_unload\n");
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error on oph_server_conf_unload\n");
 
 	free(pthread_create_arg);
 	free(conn_thread_consume_list);
@@ -118,7 +120,9 @@ void release_main()
 			free(ptr_list[ii]);
 	}
 
-	pmesg(LOG_DEBUG, __FILE__, __LINE__, "All memory allocations have been released\n");
+	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "All memory allocations have been released\n");
+
+	pthread_mutex_destroy(&global_flag);
 
 	exit(0);
 }
@@ -132,34 +136,34 @@ int process_message(amqp_envelope_t full_message)
 	char *ptr = NULL;
 	char *submission_string = strtok_r(message, "***", &ptr);
 	if (!submission_string) {
-		pmesg(LOG_ERROR, __FILE__, __LINE__, "Fail to read submission_string parameter\n");
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Fail to read submission_string parameter\n");
 		return 0;
 	}
 	char *workflow_id = strtok_r(NULL, "***", &ptr);
 	if (!workflow_id) {
-		pmesg(LOG_ERROR, __FILE__, __LINE__, "Fail to read workflow_id parameter\n");
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Fail to read workflow_id parameter\n");
 		return 0;
 	}
 	char *job_id = strtok_r(NULL, "***", &ptr);
 	if (!job_id) {
-		pmesg(LOG_ERROR, __FILE__, __LINE__, "Fail to read job_id parameter\n");
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Fail to read job_id parameter\n");
 		return 0;
 	}
 	char *ncores = strtok_r(NULL, "***", &ptr);
 	if (!ncores) {
-		pmesg(LOG_ERROR, __FILE__, __LINE__, "Fail to read ncores parameter\n");
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Fail to read ncores parameter\n");
 		return 0;
 	}
 	char *log_string = strtok_r(NULL, "***", &ptr);
 	if (!log_string) {
-		pmesg(LOG_ERROR, __FILE__, __LINE__, "Fail to read log_string parameter\n");
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Fail to read log_string parameter\n");
 		return 0;
 	}
 
 	int process_ncores = atoi(ncores);
 
 	if (process_ncores > atoi(max_ncores)) {
-		pmesg(LOG_ERROR, __FILE__, __LINE__, "This consumer process does not support job processing that require more " "than %s cores\n", max_ncores);
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "This consumer process does not support job processing that require more than %s cores\n", max_ncores);
 
 		if (message)
 			free(message);
@@ -170,7 +174,7 @@ int process_message(amqp_envelope_t full_message)
 	int exec_pid = fork();
 
 	if (exec_pid < 0) {
-		pmesg(LOG_ERROR, __FILE__, __LINE__, "Error on fork\n");
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error on fork\n");
 		exit(0);
 	}
 	if (exec_pid == 0) {
@@ -186,7 +190,7 @@ int process_message(amqp_envelope_t full_message)
 
 		int systemRes = system(exec_string);
 		if (systemRes == -1)
-			pmesg(LOG_ERROR, __FILE__, __LINE__, "Error on system: %s\n", exec_string);
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error on system: %s\n", exec_string);
 
 		total_used_ncores -= process_ncores;
 
@@ -222,7 +226,7 @@ void *worker_pthread_function(void *param)
 
 	int res;
 	if ((res = sigaction(SIGUSR1, &thread_new_act, &thread_old_act)) < 0) {
-		pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to setup signal\n");
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to setup signal\n");
 		exit(0);
 	}
 
@@ -239,7 +243,7 @@ void *worker_pthread_function(void *param)
 		// CONN, POINTER TO MESSAGE, TIMEOUT = NULL = BLOCKING, UNUSED FLAG
 
 		if (reply.reply_type == AMQP_RESPONSE_NORMAL)
-			pmesg(LOG_DEBUG, __FILE__, __LINE__, "A message has been consumed - Thread: %d\n", thread_param);
+			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "A message has been consumed - Thread: %d\n", thread_param);
 		else
 			continue;
 
@@ -247,25 +251,25 @@ void *worker_pthread_function(void *param)
 			// ACKNOWLEDGE MESSAGE
 			ack_res = amqp_basic_ack(conn_thread_consume_list[thread_param], thread_channel, envelope.delivery_tag, 0);	// last param: if true, ack all messages up to this delivery tag, if false ack only this delivery tag
 			if (ack_res != 0) {
-				pmesg(LOG_ERROR, __FILE__, __LINE__, "Failed to ack message. Delivery tag: %d - Thread: %d\n", (int) envelope.delivery_tag, thread_param);
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Failed to ack message. Delivery tag: %d - Thread: %d\n", (int) envelope.delivery_tag, thread_param);
 
 				nack_res = amqp_basic_reject(conn_thread_consume_list[thread_param], thread_channel, envelope.delivery_tag, (amqp_boolean_t) 1);	// 1 To put the message back in the queue
 				if (nack_res != 0) {
-					pmesg(LOG_ERROR, __FILE__, __LINE__, "Failed to Nack message. Delivery tag: %d - Thread: %d\n", (int) envelope.delivery_tag, thread_param);
+					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Failed to Nack message. Delivery tag: %d - Thread: %d\n", (int) envelope.delivery_tag, thread_param);
 					exit(0);
 				} else
-					pmesg(LOG_DEBUG, __FILE__, __LINE__, "A message has been requeued - Thread: %d\n", thread_param);
+					pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "A message has been requeued - Thread: %d\n", thread_param);
 			} else
-				pmesg(LOG_DEBUG, __FILE__, __LINE__, "A message has been acked - Thread: %d\n", thread_param);
+				pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "A message has been acked - Thread: %d\n", thread_param);
 		} else {
-			pmesg(LOG_ERROR, __FILE__, __LINE__, "Error on message processing - Thread: %d\n", thread_param);
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error on message processing - Thread: %d\n", thread_param);
 
 			nack_res = amqp_basic_reject(conn_thread_consume_list[thread_param], thread_channel, envelope.delivery_tag, (amqp_boolean_t) 1);	// 1 To put the message back in the queue
 			if (nack_res != 0) {
-				pmesg(LOG_ERROR, __FILE__, __LINE__, "Failed to Nack message. Delivery tag: %d - Thread: %d\n", (int) envelope.delivery_tag, thread_param);
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Failed to Nack message. Delivery tag: %d - Thread: %d\n", (int) envelope.delivery_tag, thread_param);
 				exit(0);
 			} else
-				pmesg(LOG_DEBUG, __FILE__, __LINE__, "A message has been requeued - Thread: %d\n", thread_param);
+				pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "A message has been requeued - Thread: %d\n", thread_param);
 		}
 
 		amqp_destroy_envelope(&envelope);
@@ -380,7 +384,7 @@ int main(int argc, char const *const *argv)
 	}
 
 	set_debug_level(msglevel + 10);
-	pmesg(LOG_INFO, __FILE__, __LINE__, "Selected log level %d\n", msglevel);
+	pmesg_safe(&global_flag, LOG_INFO, __FILE__, __LINE__, "Selected log level %d\n", msglevel);
 
 	FILE *fp;
 	fp = popen("hostname -I | awk '{print $1}'", "r");
@@ -403,118 +407,118 @@ int main(int argc, char const *const *argv)
 	}
 
 	if (oph_server_conf_load(instance, &hashtbl, config_file)) {
-		pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to open configuration file\n");
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to open configuration file\n");
 		exit(0);
 	}
 
 	if (!launcher) {
 		if (oph_server_conf_get_param(hashtbl, "WORKER_LAUNCHER", &launcher)) {
-			pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to get WORKER_LAUNCHER param\n");
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to get WORKER_LAUNCHER param\n");
 			oph_server_conf_unload(&hashtbl);
 			exit(0);
 		}
 	}
-	pmesg(LOG_DEBUG, __FILE__, __LINE__, "LOADED PARAM WORKER_LAUNCHER: %s\n", launcher);
+	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "LOADED PARAM WORKER_LAUNCHER: %s\n", launcher);
 
 	if (!hostname) {
 		if (oph_server_conf_get_param(hashtbl, "WORKER_HOSTNAME", &hostname)) {
-			pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to get WORKER_HOSTNAME param\n");
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to get WORKER_HOSTNAME param\n");
 			oph_server_conf_unload(&hashtbl);
 			exit(0);
 		}
 	}
-	pmesg(LOG_DEBUG, __FILE__, __LINE__, "LOADED PARAM WORKER_HOSTNAME: %s\n", hostname);
+	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "LOADED PARAM WORKER_HOSTNAME: %s\n", hostname);
 
 	if (!port) {
 		if (oph_server_conf_get_param(hashtbl, "WORKER_PORT", &port)) {
-			pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to get WORKER_PORT param\n");
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to get WORKER_PORT param\n");
 			oph_server_conf_unload(&hashtbl);
 			exit(0);
 		}
 	}
-	pmesg(LOG_DEBUG, __FILE__, __LINE__, "LOADED PARAM WORKER_PORT: %s\n", port);
+	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "LOADED PARAM WORKER_PORT: %s\n", port);
 
 	if (!task_queue_name) {
 		if (oph_server_conf_get_param(hashtbl, "TASK_QUEUE_NAME", &task_queue_name)) {
-			pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to get TASK_QUEUE_NAME param\n");
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to get TASK_QUEUE_NAME param\n");
 			oph_server_conf_unload(&hashtbl);
 			exit(0);
 		}
 	}
-	pmesg(LOG_DEBUG, __FILE__, __LINE__, "LOADED PARAM TASK_QUEUE_NAME: %s\n", task_queue_name);
+	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "LOADED PARAM TASK_QUEUE_NAME: %s\n", task_queue_name);
 
 	if (!master_hostname) {
 		if (oph_server_conf_get_param(hashtbl, "MASTER_HOSTNAME", &master_hostname)) {
-			pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to get MASTER_HOSTNAME param\n");
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to get MASTER_HOSTNAME param\n");
 			oph_server_conf_unload(&hashtbl);
 			exit(0);
 		}
 	}
-	pmesg(LOG_DEBUG, __FILE__, __LINE__, "LOADED PARAM MASTER_HOSTNAME: %s\n", master_hostname);
+	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "LOADED PARAM MASTER_HOSTNAME: %s\n", master_hostname);
 
 	if (!master_port) {
 		if (oph_server_conf_get_param(hashtbl, "MASTER_PORT", &master_port)) {
-			pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to get MASTER_PORT param\n");
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to get MASTER_PORT param\n");
 			oph_server_conf_unload(&hashtbl);
 			exit(0);
 		}
 	}
-	pmesg(LOG_DEBUG, __FILE__, __LINE__, "LOADED PARAM MASTER_PORT: %s\n", master_port);
+	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "LOADED PARAM MASTER_PORT: %s\n", master_port);
 
 	if (!username) {
 		if (oph_server_conf_get_param(hashtbl, "RABBITMQ_USERNAME", &username)) {
-			pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to get RABBITMQ_USERNAME param\n");
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to get RABBITMQ_USERNAME param\n");
 			oph_server_conf_unload(&hashtbl);
 			exit(0);
 		}
 	}
-	pmesg(LOG_DEBUG, __FILE__, __LINE__, "LOADED PARAM RABBITMQ_USERNAME: %s\n", username);
+	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "LOADED PARAM RABBITMQ_USERNAME: %s\n", username);
 
 	if (!password) {
 		if (oph_server_conf_get_param(hashtbl, "RABBITMQ_PASSWORD", &password)) {
-			pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to get RABBITMQ_PASSWORD param\n");
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to get RABBITMQ_PASSWORD param\n");
 			oph_server_conf_unload(&hashtbl);
 			exit(0);
 		}
 	}
-	pmesg(LOG_DEBUG, __FILE__, __LINE__, "LOADED PARAM RABBITMQ_PASSWORD: %s\n", password);
+	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "LOADED PARAM RABBITMQ_PASSWORD: %s\n", password);
 
 	if (!framework_path) {
 		if (oph_server_conf_get_param(hashtbl, "FRAMEWORK_PATH", &framework_path)) {
-			pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to get FRAMEWORK_PATH param\n");
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to get FRAMEWORK_PATH param\n");
 			oph_server_conf_unload(&hashtbl);
 			exit(0);
 		}
 	}
-	pmesg(LOG_DEBUG, __FILE__, __LINE__, "LOADED PARAM FRAMEWORK_PATH: %s\n", framework_path);
+	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "LOADED PARAM FRAMEWORK_PATH: %s\n", framework_path);
 
 	if (!max_ncores) {
 		if (oph_server_conf_get_param(hashtbl, "MAX_NCORES", &max_ncores)) {
-			pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to get MAX_NCORES param\n");
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to get MAX_NCORES param\n");
 			oph_server_conf_unload(&hashtbl);
 			exit(0);
 		}
 	}
-	pmesg(LOG_DEBUG, __FILE__, __LINE__, "LOADED PARAM MAX_NCORES: %s\n", max_ncores);
+	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "LOADED PARAM MAX_NCORES: %s\n", max_ncores);
 
 	if (!thread_number_str) {
 		if (oph_server_conf_get_param(hashtbl, "WORKER_THREAD_NUMBER", &thread_number_str)) {
-			pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to get WORKER_THREAD_NUMBER param\n");
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to get WORKER_THREAD_NUMBER param\n");
 			oph_server_conf_unload(&hashtbl);
 			exit(0);
 		}
 	}
-	pmesg(LOG_DEBUG, __FILE__, __LINE__, "LOADED PARAM WORKER_THREAD_NUMBER: %s\n", thread_number_str);
+	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "LOADED PARAM WORKER_THREAD_NUMBER: %s\n", thread_number_str);
 
 	props._flags = AMQP_BASIC_CONTENT_TYPE_FLAG | AMQP_BASIC_DELIVERY_MODE_FLAG;
 	props.content_type = amqp_cstring_bytes("text/plain");
 	props.delivery_mode = AMQP_DELIVERY_PERSISTENT;
 
 	if (pthread_mutex_init(&ncores_mutex, NULL) != 0)
-		pmesg(LOG_ERROR, __FILE__, __LINE__, "Error on mutex init\n");
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error on mutex init\n");
 
 	if (pthread_cond_init(&cond_var, NULL) != 0)
-		pmesg(LOG_ERROR, __FILE__, __LINE__, "Error on condition variable init\n");
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error on condition variable init\n");
 
 	sigemptyset(&signal_set);
 	sigaddset(&signal_set, SIGUSR1);
@@ -530,12 +534,12 @@ int main(int argc, char const *const *argv)
 
 		*pthread_create_arg = ii;
 		if (pthread_create(&(thread_cont_list[ii]), NULL, &worker_pthread_function, (void *) pthread_create_arg) != 0) {
-			pmesg(LOG_ERROR, __FILE__, __LINE__, "Error creating thread %d\n", ii);
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error creating thread %d\n", ii);
 			exit(0);
 		}
 	}
 
-	pmesg(LOG_DEBUG, __FILE__, __LINE__, "%s worker threads have been started\n", thread_number_str);
+	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%s worker threads have been started\n", thread_number_str);
 
 	struct sigaction new_act, old_act;
 
@@ -545,11 +549,11 @@ int main(int argc, char const *const *argv)
 
 	int res;
 	if ((res = sigaction(SIGINT, &new_act, &old_act)) < 0) {
-		pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to setup signal\n");
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to setup signal\n");
 		exit(0);
 	}
 
-	pmesg(LOG_DEBUG, __FILE__, __LINE__, "Esdm-pav-runtime-worker is ready to work\n");
+	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Esdm-pav-runtime-worker is ready to work\n");
 
 	release_main();
 
