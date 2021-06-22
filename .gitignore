@@ -46,3 +46,4 @@ test/esdm_pav_runtime_test
 test/*-coverage
 coverage.xml
 ophidiadb
+*.sif
