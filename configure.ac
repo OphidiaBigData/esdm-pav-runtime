@@ -548,6 +548,7 @@ if test "x$db" = "xno"; then
 	AC_SUBST(SQLITE_LIB)
 fi
 
+if test "x$multi_node" = "xyes"; then
 PKG_CHECK_MODULES(LIBRABBITMQ, librabbitmq >= 0.10.0)
 AC_ARG_WITH(librabbitmq_header_path,
 		[ --with-librabbitmq-header-path=PATH Location of librabbitmq include directory],
@@ -569,6 +570,7 @@ RABBITMQ_INCLUDE="$librabbitmq_header_path"
 AC_SUBST(RABBITMQ_INCLUDE)
 RABBITMQ_LIB="$librabbitmq_lib_path"
 AC_SUBST(RABBITMQ_LIB)
+fi
 
 case "${host}" in
         *-*-solaris*)   PLATFORM=SUN_OS
