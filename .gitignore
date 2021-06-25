@@ -39,10 +39,11 @@ src/oph_server
 src/oph_client
 src/oph_manage_user
 src/esdm_pav_runtime
+src/esdm_pav_runtime_worker
 test/oph_server_test
 test/esdm_pav_runtime_test
 *-coverage
 test/*-coverage
 coverage.xml
 ophidiadb
-
+*.sif

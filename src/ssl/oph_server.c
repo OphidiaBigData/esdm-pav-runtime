@@ -76,6 +76,10 @@ pthread_t token_tid_openid = 0;
 #ifdef OPH_AAA_SUPPORT
 pthread_t token_tid_aaa = 0;
 #endif
+
+#if defined(MULTI_NODE_SUPPORT) && !defined(MULTI_RABBITMQ_CONN_SUPPORT)
+pthread_mutex_t rabbitmq_flag;
+#endif
 #endif
 
 char *oph_server_location = 0;
@@ -145,6 +149,11 @@ char *oph_aaa_endpoint = 0;
 char *oph_aaa_category = 0;
 char *oph_aaa_name = 0;
 unsigned int oph_aaa_token_check_time = 0;
+#endif
+
+#ifdef MULTI_NODE_SUPPORT
+char *oph_rabbit_conf = 0;
+HASHTBL *oph_rabbit_hashtbl;
 #endif
 
 int oph_status_code(enum oph__oph_odb_job_status code)
@@ -415,6 +424,13 @@ int set_global_values(const char *configuration_file)
 	}
 #endif
 
+#ifdef MULTI_NODE_SUPPORT
+	if (!(oph_rabbit_conf = hashtbl_get(oph_server_params, OPH_SERVER_CONF_RABBIT))) {
+		hashtbl_insert(oph_server_params, OPH_SERVER_CONF_RABBIT, OPH_RABBIT);
+		oph_rabbit_conf = hashtbl_get(oph_server_params, OPH_SERVER_CONF_RABBIT);
+	}
+#endif
+
 	oph_json_location = oph_web_server_location;	// Position of JSON Response will be the same of web server
 
 	ophidiadb oDB;
@@ -453,6 +469,10 @@ void cleanup()
 	if (token_tid_aaa)
 		pthread_cancel(token_tid_aaa);
 #endif
+#endif
+
+#ifdef MULTI_NODE_SUPPORT
+	oph_rabbitmq_close_connection();
 #endif
 
 	sleep(OPH_STATUS_LOG_PERIOD);
@@ -501,6 +521,10 @@ void cleanup()
 	pthread_mutex_destroy(&service_flag);
 	pthread_cond_destroy(&termination_flag);
 	pthread_cond_destroy(&waiting_flag);
+
+#if defined(MULTI_NODE_SUPPORT)
+	pthread_mutex_destroy(&rabbitmq_flag);
+#endif
 #endif
 	oph_tp_end_xml_parser();
 }
@@ -522,6 +546,10 @@ int main(int argc, char *argv[])
 	pthread_mutex_init(&service_flag, NULL);
 	pthread_cond_init(&termination_flag, NULL);
 	pthread_cond_init(&waiting_flag, NULL);
+
+#if defined(MULTI_NODE_SUPPORT) && !defined(MULTI_RABBITMQ_CONN_SUPPORT)
+	pthread_mutex_init(&rabbitmq_flag, NULL);
+#endif
 #endif
 	struct soap soap, *tsoap = NULL;
 	psoap = &soap;
@@ -657,6 +685,13 @@ int main(int argc, char *argv[])
 #ifdef OPH_DB_SUPPORT
 	if (mysql_library_init(0, 0, 0)) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "Cannot setup MySQL\n");
+		exit(1);
+	}
+#endif
+
+#ifdef MULTI_NODE_SUPPORT
+	if (oph_rabbitmq_open_connection()) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Cannot connect to RabbitMQ\n");
 		exit(1);
 	}
 #endif

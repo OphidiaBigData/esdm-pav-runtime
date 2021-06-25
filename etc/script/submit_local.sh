@@ -26,12 +26,11 @@ submissionstring=${4}
 queue=${5}
 serverid=${6}
 workflowid=${7}
-project=${8}
 
 # Const
 fixString=
 FRAMEWORK_PATH=/usr/local/ophidia/oph-cluster/oph-analytics-framework
-LAUNCHER=/usr/local/ophidia/extra/bin/srun
+LAUNCHER=/usr/lib64/mpich/bin/mpirun
 
 # Body
 mkdir -p ${HOME}/.esdmpav
@@ -40,16 +39,7 @@ echo "#!/bin/bash" >> ${HOME}/.esdmpav/${serverid}${taskid}.submit.sh
 echo "${FRAMEWORK_PATH}/bin/oph_analytics_framework \"${submissionstring}\"" >> ${HOME}/.esdmpav/${serverid}${taskid}.submit.sh
 chmod +x ${HOME}/.esdmpav/${serverid}${taskid}.submit.sh
 
-MPI_TYPE=--mpi=pmi2
-if [ ${ncores} -eq 1 ]
-then
-	if [[ ${submissionstring} = *"operator=oph_script;"* || ${submissionstring} = *"operator=oph_generic;"* || ${submissionstring} = *"operator=oph_cdo;"* ]]
-	then
-		MPI_TYPE=--mpi=none
-	fi
-fi
-
-${LAUNCHER} ${MPI_TYPE} --input=none -n ${ncores} -o ${log} -e ${log} -J ${fixString}${serverid}${taskid} ${HOME}/.esdmpav/${serverid}${taskid}.submit.sh
+${LAUNCHER} -n ${ncores} ${HOME}/.esdmpav/${serverid}${taskid}.submit.sh 2>&1 > ${log}
 if [ $? -ne 0 ]; then
 	echo "Unable to submit ${HOME}/.esdmpav/${serverid}${taskid}.submit.sh"
 	exit -1
@@ -58,4 +48,3 @@ fi
 rm ${HOME}/.esdmpav/${serverid}${taskid}.submit.sh
 
 exit 0
-

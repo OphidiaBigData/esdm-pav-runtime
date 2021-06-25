@@ -22,6 +22,7 @@ In order to compile and run the ESDM PAV Runtime, make sure you have the followi
 6. gsoap
 7. GNU libmatheval (only for selection statement and advanced management of run-time variables)
 8. sqlite and sqlite-devel
+9. rabbitmq-c (optional)
 
 **Note**:
 
