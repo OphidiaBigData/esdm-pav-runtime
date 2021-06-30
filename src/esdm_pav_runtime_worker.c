@@ -392,7 +392,12 @@ int main(int argc, char const *const *argv)
 		exit(1);
 
 	global_ip_address = (char *) malloc(16);
-	fgets(global_ip_address, 16, fp);
+	if(fgets(global_ip_address, 16, fp) == NULL) {
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to get ip address\n");
+		release_main();
+
+		exit(0);
+	}
 	pclose(fp);
 	global_ip_address[strcspn(global_ip_address, "\n")] = 0;
 	ptr_list[12] = global_ip_address;
