@@ -368,13 +368,31 @@ int oph_odb_connect_to_ophidiadb(ophidiadb * oDB)
 
 	char sqlite_db[OPH_MAX_STRING_SIZE];
 	snprintf(sqlite_db, OPH_MAX_STRING_SIZE, OPH_DB_FILE, oph_server_location, oDB->name);
+	char sqlite_sql[OPH_MAX_STRING_SIZE];
+	snprintf(sqlite_sql, OPH_MAX_STRING_SIZE, OPH_SQLITE_SQL_FILE, oph_server_location);
 
 	int result = 0;
-	if ((result = sqlite3_open(sqlite_db, &oDB->db))) {
-		pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to open '%s': %d\n", sqlite_db, result);
+	if ((result = sqlite3_open_v2(sqlite_db, &oDB->db, SQLITE_OPEN_READWRITE, NULL))) {
 		oph_odb_disconnect_from_ophidiadb(oDB);
-		return OPH_ODB_MYSQL_ERROR;
+
+		char create_db_command[OPH_MAX_STRING_SIZE];
+		snprintf(create_db_command, OPH_MAX_STRING_SIZE, "cat %s | sqlite3 %s", sqlite_sql, sqlite_db);
+
+		int systemRes = system(create_db_command);
+		if (systemRes == 0)
+			pmesg(LOG_INFO, __FILE__, __LINE__, "Database %s has been created\n", sqlite_db);
+		else {
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "Error on create database %s\n", sqlite_db);
+			return OPH_ODB_MYSQL_ERROR;
+		}
+
+		if ((result = sqlite3_open_v2(sqlite_db, &oDB->db, SQLITE_OPEN_READWRITE, NULL))) {
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "Unable to open '%s': %d\n", sqlite_db, result);
+			oph_odb_disconnect_from_ophidiadb(oDB);
+			return OPH_ODB_MYSQL_ERROR;
+		}
 	}
+
 	if (sqlite3_exec(oDB->db, SQLITE_SWITCH_ON_FOREIGN_KEYS, NULL, NULL, NULL))
 		return OPH_ODB_MYSQL_ERROR;
 #else

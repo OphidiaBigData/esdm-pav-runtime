@@ -123,6 +123,7 @@
 #define OPH_UNKNOWN "unknown"
 #define OPH_CONFIGURATION_FILE "%s/etc/server.conf"
 #define OPH_WORKER_CONFIGURATION_FILE OPH_SERVER_LOCATION "/etc/scheduler.conf"
+#define OPH_SQLITE_SQL_FILE "%s/etc/esdm-pav-runtime-db.sql"
 #define OPH_SERVER_TIMEOUT 3600	// sec
 #define OPH_SERVER_INACTIVITY_TIMEOUT 31536000	// sec
 #define OPH_SERVER_WORKFLOW_TIMEOUT 2592000	// sec
