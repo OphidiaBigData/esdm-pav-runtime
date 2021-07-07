@@ -18,7 +18,7 @@
 
 -- Use:
 --
--- > sqlite esdm-pav-runtime-db
+-- > sqlite esdm-pav-runtime-db.db
 -- sqlite> .read esdm-pav-runtime-db.sql
 
 CREATE TABLE `country` (
