@@ -457,18 +457,22 @@ void cleanup()
 	if (oph_status_log_file_name)
 		oph_status_log_file_name = NULL;
 #ifdef OPH_OPENID_SUPPORT
-	oph_openid_token_check_time = 0;
+	if (oph_openid_token_check_time) {
+		oph_openid_token_check_time = 0;
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
-	if (token_tid_openid)
-		pthread_cancel(token_tid_openid);
+		if (token_tid_openid)
+			pthread_cancel(token_tid_openid);
 #endif
+	}
 #endif
 #ifdef OPH_AAA_SUPPORT
-	oph_aaa_token_check_time = 0;
+	if (oph_aaa_token_check_time) {
+		oph_aaa_token_check_time = 0;
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
-	if (token_tid_aaa)
-		pthread_cancel(token_tid_aaa);
+		if (token_tid_aaa)
+			pthread_cancel(token_tid_aaa);
 #endif
+	}
 #endif
 
 #ifdef MULTI_NODE_SUPPORT
@@ -555,7 +559,8 @@ int main(int argc, char *argv[])
 	psoap = &soap;
 
 	int ch, msglevel = LOG_INFO;
-	static char *USAGE = "\nUSAGE:\noph_server [-d] [-l <log_file>] [-p <port>] [-v] [-w]\n";
+	static char *USAGE =
+	    "\nUSAGE:\noph_server [OPTIONS]\n\nOptions:\n-a: disable user autentication\n-c <wf_log_file>: set CSV log file for workflows\n-d: enable debug mode\n-h: show this help\n-l <log_file>: set main log file\n-m: enable SSH (deprecated)\n-p <port>: set server port number\n-s <log_file>: set status log file\n-t <task_log_file>: set CSV log file for tasks\n-v: show conditions\n-w: enable warning level messages\n-x: show warrenty\n-z: show license\n";
 
 	fprintf(stdout, "%s", OPH_VERSION);
 	fprintf(stdout, "%s", OPH_DISCLAIMER);
