@@ -1,10 +1,13 @@
 autom4te.cache/
 config/
+libltdl/
 m4/libtool.m4
 m4/ltoptions.m4
 m4/ltsugar.m4
 m4/ltversion.m4
 m4/lt~obsolete.m4
+m4/argz.m4
+m4/ltdl.m4
 aclocal.m4
 autoscan.log
 config.h*
@@ -39,7 +42,6 @@ src/oph_server
 src/oph_client
 src/oph_manage_user
 src/esdm_pav_runtime
-src/esdm_pav_runtime_worker
 test/oph_server_test
 test/esdm_pav_runtime_test
 *-coverage

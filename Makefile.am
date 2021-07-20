@@ -20,7 +20,7 @@ AUTOMAKE_OPTIONS = subdir-objects
 
 ACLOCAL_AMFLAGS = -I m4
 
-SUBDIRS = . src test
+SUBDIRS = ophidia-analytics-framework . src test
 
 sysconf_DATA = etc/*.conf etc/oph_server_logrotate etc/esdm-pav-runtime-db.sql
 
@@ -36,17 +36,8 @@ dist_cert_DATA = .empty
 logdir = $(prefix)/log
 dist_log_DATA = .empty
 
-xmloperdir = $(prefix)/etc/operators_xml
-dist_xmloper_DATA = etc/operators_xml/*.xml
-
-dtddir = $(prefix)/etc/dtd
-dist_dtd_DATA = etc/dtd/*.dtd
-
 rmsdir = $(prefix)/etc/rms
 dist_rms_DATA = etc/rms/*.conf
-
-pxmloperdir = $(OPH_WEB_SERVER_LOCATION)/operators_xml
-dist_pxmloper_DATA = etc/operators_xml/*.xml
 
 sessionsdir = $(OPH_WEB_SERVER_LOCATION)/sessions
 dist_sessions_DATA = .empty
@@ -63,8 +54,8 @@ CODE_COVERAGE_IGNORE_PATTERN = "*oph_server_test*"
 @CODE_COVERAGE_RULES@
 
 clean-local:
-	-rm -f *~ authz/*~ etc/*~ etc/cert/*~ etc/dtd/*~ etc/rms/*~ etc/operators_xml/*~
+	-rm -f *~ authz/*~ etc/*~ etc/cert/*~ etc/ophidia_dtd/*~ etc/rms/*~ etc/operators_xml/*~
 
 distclean-local:
-	-rm -f *~ authz/*~ etc/*~ etc/cert/*~ etc/dtd/*~ etc/rms/*~ etc/operators_xml/*~
+	-rm -f *~ authz/*~ etc/*~ etc/cert/*~ etc/ophidia_dtd/*~ etc/rms/*~ etc/operators_xml/*~
 

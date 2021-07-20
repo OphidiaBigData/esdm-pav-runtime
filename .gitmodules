@@ -1,0 +1,4 @@
+[submodule "ophidia-analytics-framework"]
+	path = ophidia-analytics-framework
+	url = https://github.com/OphidiaBigData/ophidia-analytics-framework.git
+	branch = feature-pav4

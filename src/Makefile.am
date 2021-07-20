@@ -19,10 +19,6 @@
 bin_PROGRAMS=esdm_pav_runtime
 bindir=${prefix}/bin
 
-if MULTI_NODE
-bin_PROGRAMS += esdm_pav_runtime_worker
-endif
-
 ADDITIONAL_CFLAGS = -I$(INTERFACE_TYPE) $(LIBSSL_INCLUDE) -DOPH_SERVER_LOCATION=\"${prefix}\" $(OPT) -DCOMMAND_TO_JSON -DLEVEL1
 ADDITIONAL_LIBS = -lm -lpthread
 
@@ -381,16 +377,9 @@ esdm_pav_runtime_SOURCES= $(INTERFACE_TYPE)/oph_server.c
 esdm_pav_runtime_CFLAGS= $(OPT) -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) -Ioph_workflow $(MYSQL_CFLAGS) $(MYCFLAGS_THREADS)
 esdm_pav_runtime_LDFLAGS= $(MYLDFLAGS_THREADS)
 if MULTI_NODE
-esdm_pav_runtime_LDADD= $(ADDITIONAL_LIBS) ${MYSQL_LDFLAGS} -L. -lsoapServer -lstdsoap2 -lutils -loph_ophidiadb -loph_auth -loph_task_parser_library -lhashtbl -loph_service_info -loph_odb_job -ldebug -lthreads -loph_plugin -loph_rmanager -loph_notify -loph_known_operators -loph_execute_main -loph_job_list -loph_workflow_engine -lrabbitmq_utils -lrabbitmq -loph_ssh_submit
+esdm_pav_runtime_LDADD= $(ADDITIONAL_LIBS) ${MYSQL_LDFLAGS} -L. -lsoapServer -lstdsoap2 -lutils -loph_ophidiadb -loph_auth -loph_task_parser_library -lhashtbl -loph_service_info -loph_odb_job -ldebug -lthreads -loph_plugin -loph_rmanager -loph_notify -loph_known_operators -loph_execute_main -loph_job_list -loph_workflow_engine -loph_ssh_submit
 else
 esdm_pav_runtime_LDADD= $(ADDITIONAL_LIBS) ${MYSQL_LDFLAGS} -L. -lsoapServer -lstdsoap2 -lutils -loph_ophidiadb -loph_auth -loph_task_parser_library -lhashtbl -loph_service_info -loph_odb_job -ldebug -lthreads -loph_plugin -loph_rmanager -loph_notify -loph_known_operators -loph_execute_main -loph_job_list -loph_workflow_engine
-endif
-
-if MULTI_NODE
-esdm_pav_runtime_worker_SOURCES = esdm_pav_runtime_worker.c
-esdm_pav_runtime_worker_CFLAGS = -I. $(ADDITIONAL_CFLAGS)
-esdm_pav_runtime_worker_LDFLAGS= $(OPENID_LDFLAGS) $(AAA_LDFLAGS)
-esdm_pav_runtime_worker_LDADD = $(ADDITIONAL_LIBS) $(OPENID_LIBS) $(AAA_LIBS) -L. -ldebug -loph_server_conf -lrabbitmq_utils
 endif
 
 clean-local:

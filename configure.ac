@@ -492,7 +492,7 @@ OPH_AAA_SUPPORT=$aaa
 AC_SUBST(OPH_AAA_SUPPORT)
 
 OPH_DB_SUPPORT=
-AC_ARG_ENABLE(db, [ --enable-db	Enable Ophidia DB support. (Disabled by default)], [ db="yes" ], [ db="no" ])
+AC_ARG_ENABLE(db, [  --disable-db	Disable Ophidia DB support. (Enabled by default)], [ db="no" ], [ db="yes" ])
 if test "x$db" = "xyes"; then
 	AC_MSG_NOTICE(Ophidia DB enabled)
 else
@@ -633,5 +633,8 @@ AM_CONDITIONAL(VOMS, test $voms_enable = 1)
 
 AC_CONFIG_FILES([etc/oph_server], [chmod 0755 etc/oph_server])
 
-AC_OUTPUT([Makefile src/Makefile test/Makefile etc/server.conf etc/oph_server.service etc/web/env.php etc/oph_server_logrotate])
+if test -d "$srcdir/ophidia-analytics-framework"; then
+    AC_CONFIG_SUBDIRS([ophidia-analytics-framework])
+fi
 
+AC_OUTPUT([Makefile src/Makefile test/Makefile etc/server.conf etc/oph_server.service etc/web/env.php etc/oph_server_logrotate])
