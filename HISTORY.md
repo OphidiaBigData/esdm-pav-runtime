@@ -1,9 +1,23 @@
 
-## Next release
+## v1.2.0 - 2021-06-25
 
 ### Added:
 
-- New argument 'WORKING_DIR' in main configuration file
+- Support for multi-node execution via RabbitMQ-based scheduling system
+- Initial support for Singularity-based containerized version
+- New experiment task type 'control' and support for related operators
+
+### Changed:
+
+- Configuration files, scripts and Makefiles to simplify the building procedure
+- Binary file names and default paths
+- Updated execution status names to be compliant with the new JSON schema
+
+### Fixed:
+
+- Reference to non-mandatory and obsolete dependencies 
+- Bug related to task history management
+- Bug in saving extended experiment request
 
 ## v1.0.0 - 2020-10-01
 

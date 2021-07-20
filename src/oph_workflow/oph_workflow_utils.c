@@ -42,6 +42,8 @@ int oph_workflow_get_argument_size(oph_workflow * workflow, int task_index, size
 		if (*max < current)
 			*max = current;
 	}
+
+	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
 
 int oph_workflow_check_args(oph_workflow * workflow, int task_index, int light_task_index, const char *key, char **value, int *index, const char *current_arg)
@@ -521,9 +523,31 @@ int oph_realloc_vector(char ***vector, int *length, int incr)
 		return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 	}
 
-	memcpy(*vector, tmp, (*length) * sizeof(char *));
+	memcpy(*vector, tmp, *length * sizeof(char *));
 	free(tmp);
 
+	memset(*vector + *length, 0, incr * sizeof(char *));
+	*length += incr;
+
+	return OPH_WORKFLOW_EXIT_SUCCESS;
+}
+
+int oph_realloc_vector2(oph_workflow_ordered_list *** vector, int *length, int incr)
+{
+	if (!vector || !(*vector) || !length)
+		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
+	oph_workflow_ordered_list **tmp = *vector;
+	*vector = (oph_workflow_ordered_list **) malloc((*length + incr) * sizeof(oph_workflow_ordered_list *));
+
+	if (!(*vector)) {
+		*vector = tmp;
+		return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+	}
+
+	memcpy(*vector, tmp, *length * sizeof(oph_workflow_ordered_list *));
+	free(tmp);
+
+	memset(*vector + *length, 0, incr * sizeof(oph_workflow_ordered_list *));
 	*length += incr;
 
 	return OPH_WORKFLOW_EXIT_SUCCESS;
