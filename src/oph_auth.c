@@ -564,7 +564,7 @@ char *oph_sha(char *to, const char *passwd)
 			return NULL;
 		*to++ = '*';
 		const char hash_byte[] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-		char *str = hash_stage, *str_end = hash_stage + SHA_DIGEST_LENGTH;
+		unsigned char *str = hash_stage, *str_end = hash_stage + SHA_DIGEST_LENGTH;
 		for (; str != str_end; ++str) {
 			*to++ = hash_byte[((unsigned char) *str) >> 4];
 			*to++ = hash_byte[((unsigned char) *str) & 0x0F];
@@ -2775,19 +2775,15 @@ int oph_auth_enable_user(const char *userid, int result, char *actual_userid)
 int oph_auth_autocheck_tokens()
 {
 
-#ifdef OPH_OPENID_SUPPORT
-
 #if defined(_POSIX_THREADS) || defined(_SC_THREADS)
-	pthread_create(&token_tid_openid, NULL, (void *(*)(void *)) &_oph_check_openid, NULL);
-#endif
-
+#ifdef OPH_OPENID_SUPPORT
+	if (oph_openid_token_check_time)
+		pthread_create(&token_tid_openid, NULL, (void *(*)(void *)) &_oph_check_openid, NULL);
 #endif
 #ifdef OPH_AAA_SUPPORT
-
-#if defined(_POSIX_THREADS) || defined(_SC_THREADS)
-	pthread_create(&token_tid_aaa, NULL, (void *(*)(void *)) &_oph_check_aaa, NULL);
+	if (oph_aaa_token_check_time)
+		pthread_create(&token_tid_aaa, NULL, (void *(*)(void *)) &_oph_check_aaa, NULL);
 #endif
-
 #endif
 
 	return OPH_SERVER_OK;
