@@ -637,4 +637,4 @@ if test -d "$srcdir/ophidia-analytics-framework"; then
     AC_CONFIG_SUBDIRS([ophidia-analytics-framework])
 fi
 
-AC_OUTPUT([Makefile src/Makefile test/Makefile etc/server.conf etc/oph_server.service etc/web/env.php etc/oph_server_logrotate])
+AC_OUTPUT([Makefile src/Makefile test/Makefile etc/server.conf etc/oph_server.service etc/web/env.php etc/oph_server_logrotate etc/scheduler.conf])

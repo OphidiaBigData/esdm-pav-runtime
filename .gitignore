@@ -38,6 +38,7 @@ etc/oph_server_logrotate
 etc/oph_server.service
 etc/server.conf
 etc/web/env.php
+etc/scheduler.conf
 src/oph_server
 src/oph_client
 src/oph_manage_user
