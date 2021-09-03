@@ -20,7 +20,6 @@
 #include <string.h>
 #include <time.h>
 
-//extern int msglevel; /* the higher, the more messages... */
 int msglevel = LOG_INFO;	/* the higher, the more messages... */
 FILE *log_file = 0;
 

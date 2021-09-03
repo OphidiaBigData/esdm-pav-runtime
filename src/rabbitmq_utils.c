@@ -19,9 +19,6 @@
 #include "rabbitmq_utils.h"
 #include "debug.h"
 
-#include <amqp_tcp_socket.h>
-#include <amqp.h>
-#include <amqp_framing.h>
 #include "assert.h"
 
 #include <pthread.h>

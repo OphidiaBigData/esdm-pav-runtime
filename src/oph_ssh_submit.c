@@ -44,11 +44,9 @@
 #ifdef MULTI_NODE_SUPPORT
 #include "debug.h"
 #include "oph_server_confs.h"
-
 #include "rabbitmq_utils.h"
-#include <amqp_tcp_socket.h>
-#include <amqp.h>
-#include <amqp_framing.h>
+
+#include <sqlite3.h>
 
 #ifndef MULTI_RABBITMQ_CONN_SUPPORT
 amqp_connection_state_t single_rabbitmq_publish_conn = NULL;
@@ -62,9 +60,12 @@ char *master_port = NULL;
 char *rabbitmq_username = NULL;
 char *rabbitmq_password = NULL;
 char *rabbitmq_task_queue_name = NULL;
+char *db_location = NULL;
+char *wid_tocancel = NULL;
 
 extern HASHTBL *oph_rabbit_hashtbl;
 extern pthread_mutex_t rabbitmq_flag;
+extern char *oph_rabbit_conf;
 #endif
 
 extern pthread_mutex_t global_flag;
@@ -134,6 +135,15 @@ int oph_rabbitmq_open_connection()
 	}
 	pmesg_safe(&rabbitmq_flag, LOG_INFO, __FILE__, __LINE__, "LOADED PARAM TASK_QUEUE_NAME: %s\n", rabbitmq_task_queue_name);
 
+	if (!db_location) {
+		if (oph_server_conf_get_param(oph_rabbit_hashtbl, "DATABASE_PATH", &db_location)) {
+			pmesg_safe(&rabbitmq_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to get DATABASE_PATH param\n");
+			oph_server_conf_unload(&oph_rabbit_hashtbl);
+			return 1;
+		}
+	}
+	pmesg_safe(&rabbitmq_flag, LOG_INFO, __FILE__, __LINE__, "LOADED PARAM DB_LOCATION: %s\n", db_location);
+
 	props._flags = AMQP_BASIC_CONTENT_TYPE_FLAG | AMQP_BASIC_DELIVERY_MODE_FLAG;
 	props.content_type = amqp_cstring_bytes("text/plain");
 	props.delivery_mode = AMQP_DELIVERY_PERSISTENT;
@@ -162,6 +172,47 @@ int oph_rabbitmq_close_connection()
 		pmesg_safe(&rabbitmq_flag, LOG_ERROR, __FILE__, __LINE__, "Error on oph_server_conf_unload\n");
 		return 1;
 	}
+
+	return 0;
+}
+
+int send_delete_message(void *NotUsed, int argc, char **argv, char **azColName)
+{
+	UNUSED(NotUsed);
+	UNUSED(argc);
+	UNUSED(azColName);
+
+	if (!argv[0] || !argv[1] || !argv[2])
+		return 1;
+
+	amqp_connection_state_t conn;
+	amqp_channel_t channel = 1;
+
+	rabbitmq_publish_connection(&conn, channel, argv[0], argv[1], rabbitmq_username, rabbitmq_password, argv[2]);
+	int messages = get_number_queued_messages(master_hostname, master_port, rabbitmq_username, rabbitmq_password, rabbitmq_task_queue_name);
+
+	int neededSize = snprintf(NULL, 0, "%s***%d", wid_tocancel, messages);
+	char *final_message = (char *) malloc(neededSize + 1);
+	snprintf(final_message, neededSize + 1, "%s***%d", wid_tocancel, messages);
+
+	int status = amqp_basic_publish(conn,
+					channel,
+					amqp_cstring_bytes(""),
+					amqp_cstring_bytes(argv[2]),
+					0,	// mandatory (message must be routed to a queue)
+					0,	// immediate (message must be delivered to a consumer immediately)
+					&props,	// properties
+					amqp_cstring_bytes(final_message));
+
+	if (status == AMQP_STATUS_OK)
+		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Message %s has been sent to %s on ip_address %s and port %s\n", final_message, argv[2], argv[0], argv[1]);
+	else
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Cannot send message to %s on ip_address %s and port %s\n", argv[2], argv[0], argv[1]);
+
+	if (final_message)
+		free(final_message);
+
+	close_rabbitmq_connection(conn, channel);
 
 	return 0;
 }
@@ -213,101 +264,133 @@ int _system(const char *command)
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Fail to read aaa parameter\n");
 		return 1;
 	}
-	char *job_id = strtok_r(NULL, " ", &ptr);
-	if (!job_id) {
-		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Fail to read job_id parameter\n");
-		return 1;
-	}
-	char *ncores = strtok_r(NULL, " ", &ptr);
-	if (!ncores) {
-		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Fail to read ncores parameter\n");
-		return 1;
-	}
-	char *log_string = strtok_r(NULL, " ", &ptr);
-	if (!log_string) {
-		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Fail to read log_string parameter\n");
-		return 1;
-	}
-	char *submission_string = strtok_r(NULL, " ", &ptr);
-	if (!submission_string) {
-		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Fail to read submission_string parameter\n");
-		return 1;
-	}
-	aaa = strtok_r(NULL, " ", &ptr);
-	if (!aaa) {
-		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Fail to read aaa parameter\n");
-		return 1;
-	}
-	aaa = strtok_r(NULL, " ", &ptr);
-	if (!aaa) {
-		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Fail to read aaa parameter\n");
-		return 1;
-	}
-	char *workflow_id = strtok_r(NULL, " ", &ptr);
-	if (!workflow_id) {
-		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Fail to read workflow_id parameter\n");
-		return 1;
-	}
-#ifdef MULTI_RABBITMQ_CONN_SUPPORT
-	amqp_connection_state_t multi_rabbitmq_publish_conn = NULL;
-	amqp_channel_t channel = 1;
 
-	if (rabbitmq_publish_connection(&multi_rabbitmq_publish_conn, channel, master_hostname, master_port, rabbitmq_username, rabbitmq_password, rabbitmq_task_queue_name) == RABBITMQ_FAILURE)
-		return 1;
+	if (strstr(command, "oph_cancel") != NULL) {
+		wid_tocancel = strtok_r(NULL, " ", &ptr);
+		if (!wid_tocancel) {
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Fail to read wid_tocancel parameter\n");
+			return 1;
+		}
+
+		sqlite3 *db = NULL;
+		char *err_msg = 0;
+
+		if (sqlite3_open_v2(db_location, &db, SQLITE_OPEN_READWRITE, NULL) != SQLITE_OK) {
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Fail to cancel workflow %s! Cannot open jobs database %s\n", wid_tocancel, db_location);
+			sqlite3_close(db);
+
+			return 1;
+		}
+
+		int neededSize = snprintf(NULL, 0, "SELECT ip_address, port, delete_queue_name FROM job_table GROUP BY ip_address, port, delete_queue_name;");
+		char *select_distinct_sql = (char *) malloc(neededSize + 1);
+		snprintf(select_distinct_sql, neededSize + 1, "SELECT ip_address, port, delete_queue_name FROM job_table GROUP BY ip_address, port, delete_queue_name;");
+
+		while (sqlite3_exec(db, select_distinct_sql, send_delete_message, 0, &err_msg) != SQLITE_OK)
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "SQL error on select query: %s\n", err_msg);
+
+		sqlite3_close(db);
+		free(select_distinct_sql);
+
+		return 0;
+	} else if (strstr(command, "submit_local.sh") != NULL) {
+		char *job_id = strtok_r(NULL, " ", &ptr);
+		if (!job_id) {
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Fail to read job_id parameter\n");
+			return 1;
+		}
+		char *ncores = strtok_r(NULL, " ", &ptr);
+		if (!ncores) {
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Fail to read ncores parameter\n");
+			return 1;
+		}
+		char *log_string = strtok_r(NULL, " ", &ptr);
+		if (!log_string) {
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Fail to read log_string parameter\n");
+			return 1;
+		}
+		char *submission_string = strtok_r(NULL, " ", &ptr);
+		if (!submission_string) {
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Fail to read submission_string parameter\n");
+			return 1;
+		}
+		aaa = strtok_r(NULL, " ", &ptr);
+		if (!aaa) {
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Fail to read aaa parameter\n");
+			return 1;
+		}
+		aaa = strtok_r(NULL, " ", &ptr);
+		if (!aaa) {
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Fail to read aaa parameter\n");
+			return 1;
+		}
+		char *workflow_id = strtok_r(NULL, " ", &ptr);
+		if (!workflow_id) {
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Fail to read workflow_id parameter\n");
+			return 1;
+		}
+#ifdef MULTI_RABBITMQ_CONN_SUPPORT
+		amqp_connection_state_t multi_rabbitmq_publish_conn = NULL;
+		amqp_channel_t channel = 1;
+
+		if (rabbitmq_publish_connection(&multi_rabbitmq_publish_conn, channel, master_hostname, master_port, rabbitmq_username, rabbitmq_password, rabbitmq_task_queue_name) ==
+		    RABBITMQ_FAILURE)
+			return 1;
 #endif
 
-	int neededSize = snprintf(NULL, 0, "%s***%s***%s***%s***%s", submission_string, workflow_id, job_id, ncores, log_string);
-	char *final_message = (char *) malloc(neededSize + 1);
-	snprintf(final_message, neededSize + 1, "%s***%s***%s***%s***%s", submission_string, workflow_id, job_id, ncores, log_string);
+		int neededSize = snprintf(NULL, 0, "%s***%s***%s***%s***%s", submission_string, workflow_id, job_id, ncores, log_string);
+		char *final_message = (char *) malloc(neededSize + 1);
+		snprintf(final_message, neededSize + 1, "%s***%s***%s***%s***%s", submission_string, workflow_id, job_id, ncores, log_string);
 
 #ifndef MULTI_RABBITMQ_CONN_SUPPORT
-	pthread_mutex_lock(&rabbitmq_flag);
+		pthread_mutex_lock(&rabbitmq_flag);
 
-	int res_status = amqp_basic_publish(single_rabbitmq_publish_conn,
-					    channel,
-					    amqp_cstring_bytes(""),
-					    amqp_cstring_bytes(rabbitmq_task_queue_name),
-					    0,
-					    0,
-					    &props,
-					    amqp_cstring_bytes(final_message));
+		int res_status = amqp_basic_publish(single_rabbitmq_publish_conn,
+						    channel,
+						    amqp_cstring_bytes(""),
+						    amqp_cstring_bytes(rabbitmq_task_queue_name),
+						    0,
+						    0,
+						    &props,
+						    amqp_cstring_bytes(final_message));
 
-	pthread_mutex_unlock(&rabbitmq_flag);
+		pthread_mutex_unlock(&rabbitmq_flag);
 #else
-	int res_status = amqp_basic_publish(multi_rabbitmq_publish_conn,
-					    channel,
-					    amqp_cstring_bytes(""),
-					    amqp_cstring_bytes(rabbitmq_task_queue_name),
-					    0,
-					    0,
-					    &props,
-					    amqp_cstring_bytes(final_message));
+		int res_status = amqp_basic_publish(multi_rabbitmq_publish_conn,
+						    channel,
+						    amqp_cstring_bytes(""),
+						    amqp_cstring_bytes(rabbitmq_task_queue_name),
+						    0,
+						    0,
+						    &props,
+						    amqp_cstring_bytes(final_message));
 #endif
 
-	if (res_status == AMQP_STATUS_OK)
-		pmesg_safe(&global_flag, LOG_INFO, __FILE__, __LINE__, "Message has been sent on %s: %s\n", rabbitmq_task_queue_name, final_message);
-	else {
-		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Cannot send message to %s\n", rabbitmq_task_queue_name);
+		if (res_status == AMQP_STATUS_OK)
+			pmesg_safe(&global_flag, LOG_INFO, __FILE__, __LINE__, "Message has been sent on %s: %s\n", rabbitmq_task_queue_name, final_message);
+		else {
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Cannot send message to %s\n", rabbitmq_task_queue_name);
+			if (final_message)
+				free(final_message);
+			if (my_command)
+				free(my_command);
+			return 1;
+		}
+
 		if (final_message)
 			free(final_message);
 		if (my_command)
 			free(my_command);
-		return 1;
-	}
-
-	if (final_message)
-		free(final_message);
-	if (my_command)
-		free(my_command);
 
 #ifdef MULTI_RABBITMQ_CONN_SUPPORT
-	if (close_rabbitmq_connection(multi_rabbitmq_publish_conn, channel) == RABBITMQ_SUCCESS)
-		pmesg_safe(&global_flag, LOG_INFO, __FILE__, __LINE__, "RabbitMQ connection for publish on %s has been closed\n", rabbitmq_task_queue_name);
-	else
-		return 1;
+		if (close_rabbitmq_connection(multi_rabbitmq_publish_conn, channel) == RABBITMQ_SUCCESS)
+			pmesg_safe(&global_flag, LOG_INFO, __FILE__, __LINE__, "RabbitMQ connection for publish on %s has been closed\n", rabbitmq_task_queue_name);
+		else
+			return 1;
 #endif
 
-	status = 0;
+		status = 0;
+	}
 #else
 	pid_t childPid;
 

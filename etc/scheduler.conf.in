@@ -5,10 +5,4 @@ RABBITMQ_PASSWORD=esdmpav
 TASK_QUEUE_NAME=task_queue
 MASTER_HOSTNAME=localhost
 MASTER_PORT=5672
-# WORKER CONF
-WORKER_LAUNCHER=mpiexec.hydra
-WORKER_HOSTNAME=localhost
-WORKER_PORT=5672
-FRAMEWORK_PATH=/usr/local/ophidia/oph-cluster/oph-analytics-framework/bin/oph_analytics_framework
-MAX_NCORES=100
-WORKER_THREAD_NUMBER=10
+DATABASE_PATH=@OPH_SERVER_LOCATION@/ophidia-analytics-framework/etc/job_database.db
