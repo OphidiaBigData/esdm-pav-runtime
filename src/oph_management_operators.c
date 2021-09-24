@@ -136,7 +136,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 				item->wf->status = OPH_ODB_STATUS_ABORTED;
 				item->wf->cancel_type = btype;
 				snprintf(error_notification, OPH_MAX_STRING_SIZE, OPH_WORKFLOW_BASE_NOTIFICATION, item->wf->idjob, 0, -1, item->wf->idjob, OPH_ODB_STATUS_ABORTED, item->wf->sessionid,
-					 item->wf->markerid);
+					 item->wf->markerid, item->wf->save ? OPH_COMMON_YES : OPH_COMMON_NO);
 				jobid = ++*state->jobid;
 			}
 
@@ -2683,11 +2683,6 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 
 		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Execute known operator '%s'\n", operator_name);
 
-#ifndef OPH_DB_SUPPORT
-		pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Operator cannot be excuted as Ophidia DB is disabled\n");
-		return OPH_SERVER_SYSTEM_ERROR;
-#endif
-
 		pthread_mutex_lock(&global_flag);
 
 		oph_job_info *item = NULL, *prev = NULL;
@@ -2696,7 +2691,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 			pthread_mutex_unlock(&global_flag);
 			return OPH_SERVER_SYSTEM_ERROR;
 		}
-		int max_hosts = item->wf->max_hosts;
+		int max_hosts = item->wf->max_hosts;	// Its value should be used only for the deploy, refer to ophDB otherwise
 		char em = item->wf->exec_mode && !strncasecmp(item->wf->exec_mode, OPH_ARG_MODE_SYNC, OPH_MAX_STRING_SIZE);
 		int wid = item->wf->workflowid;
 
@@ -2917,10 +2912,22 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 								snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to retrieve number of available hosts!");
 								break;
 							}
+							// Update max_hosts to actual value
+							snprintf(tmp, OPH_MAX_STRING_SIZE, OPHIDIADB_RETRIEVE_USER, id_user);
+							if (oph_odb_retrieve_list(&oDB, tmp, &user_list)) {
+								pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "User data cannot be retrieved\n");
+								snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to retrieve user data!");
+								break;
+							}
+							if (user_list.size && user_list.id)
+								max_hosts = user_list.id[0];
 							if (max_hosts && (available_hosts > max_hosts - reserved_hosts))
 								available_hosts = max_hosts - reserved_hosts;
+							if (available_hosts < 0)
+								available_hosts = 0;
 							snprintf(tmp, OPH_MAX_STRING_SIZE, OPHIDIADB_RETRIEVE_RESERVED_PARTITIONS, id_user, host_partition ? host_partition : "%");
-							if (oph_odb_retrieve_list(&oDB, tmp, &list)) {
+							success = oph_odb_retrieve_list2(&oDB, tmp, &list);
+							if (success && (success != OPH_ODB_NO_ROW_FOUND)) {
 								pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Partition list cannot be retrieved\n");
 								snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to retrieve partition list!");
 								break;
@@ -2929,10 +2936,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 							num_fields = 4;
 
 							// Header
-							if (oph_json_is_objkey_printable(objkeys, objkeys_num, OPH_JSON_OBJKEY_CLUSTER_SUMMARY))
-								success = 0;
-							else
-								success = 1;	// No output
+							success = oph_json_is_objkey_printable(objkeys, objkeys_num, OPH_JSON_OBJKEY_CLUSTER_SUMMARY) ? 0 : 1;
 							while (!success) {
 								jsonkeys = (char **) malloc(sizeof(char *) * num_fields);
 								if (!jsonkeys) {
@@ -3459,6 +3463,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 
 					case 1:{
 
+#ifdef OPH_DB_SUPPORT
 							if (oph_odb_get_total_hosts(&oDB, &total_hosts)) {
 								pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Number of total hosts cannot be retrieved\n");
 								snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to retrieve number of total hosts!");
@@ -3482,7 +3487,8 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 							}
 							snprintf(tmp, OPH_MAX_STRING_SIZE, OPHIDIADB_RETRIEVE_TOTAL_RESERVED_PARTITIONS, user_filter ? user_filter : "%",
 								 host_partition ? host_partition : "%");
-							if (oph_odb_retrieve_list(&oDB, tmp, &list)) {
+							success = oph_odb_retrieve_list2(&oDB, tmp, &list);
+							if (success && (success != OPH_ODB_NO_ROW_FOUND)) {
 								pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Partition list cannot be retrieved\n");
 								snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to retrieve partition list!");
 								break;
@@ -3491,10 +3497,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 							num_fields = 4;
 
 							// Header
-							if (oph_json_is_objkey_printable(objkeys, objkeys_num, OPH_JSON_OBJKEY_CLUSTER_SUMMARY))
-								success = 0;
-							else
-								success = 1;	// No output
+							success = oph_json_is_objkey_printable(objkeys, objkeys_num, OPH_JSON_OBJKEY_CLUSTER_SUMMARY) ? 0 : 1;
 							while (!success) {
 								jsonkeys = (char **) malloc(sizeof(char *) * num_fields);
 								if (!jsonkeys) {
@@ -4266,6 +4269,9 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 								} else
 									success = 1;
 							}
+#else
+							snprintf(error_message, OPH_MAX_STRING_SIZE, "This option is disabled in this implementation!");
+#endif
 
 							break;
 						}
@@ -4302,6 +4308,10 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 								}
 								if (rhosts + nhosts > max_hosts) {
 									nhosts = max_hosts - rhosts;
+									if (nhosts <= 0) {
+										snprintf(error_message, OPH_MAX_STRING_SIZE, "Reached the maximum number of reserved hosts: no host available");
+										break;
+									}
 									if (nhosts > available_hosts)
 										nhosts = available_hosts;
 									snprintf(error_message, OPH_MAX_STRING_SIZE, "Reached the maximum number of reserved hosts: only %d host%s available", nhosts,
