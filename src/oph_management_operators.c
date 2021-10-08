@@ -39,6 +39,7 @@ extern unsigned int oph_default_max_sessions;
 extern unsigned int oph_default_session_timeout;
 extern oph_rmanager *orm;
 extern char oph_cluster_deployment;
+extern char oph_pav_worker_deployment;
 extern char *oph_txt_location;
 extern char *oph_subm_user;
 extern ophidiadb *ophDB;
@@ -4485,6 +4486,394 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 			return OPH_SERVER_SYSTEM_ERROR;
 
 		error = OPH_SERVER_NO_RESPONSE;
+	} else if (!strncasecmp(operator_name, OPH_OPERATOR_PAV_WORKER, OPH_MAX_STRING_SIZE)) {
+
+		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Execute known operator '%s'\n", operator_name);
+
+		pthread_mutex_lock(&global_flag);
+
+		oph_job_info *item = NULL, *prev = NULL;
+		if (!odb_wf_id || !(item = oph_find_job_in_job_list(state->job_info, *odb_wf_id, &prev))) {
+			pmesg(LOG_WARNING, __FILE__, __LINE__, "Workflow with ODB_ID %d not found\n", *odb_wf_id);
+			pthread_mutex_unlock(&global_flag);
+			return OPH_SERVER_SYSTEM_ERROR;
+		}
+		int max_hosts = item->wf->max_hosts;	// Its value should be used only for the deploy, refer to ophDB otherwise
+		char em = item->wf->exec_mode && !strncasecmp(item->wf->exec_mode, OPH_ARG_MODE_SYNC, OPH_MAX_STRING_SIZE);
+		int wid = item->wf->workflowid;
+
+		pthread_mutex_unlock(&global_flag);
+
+		HASHTBL *task_tbl = NULL;
+		if (oph_tp_task_params_parser(operator_name, request, &task_tbl)) {
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Task parser error\n");
+			if (task_tbl)
+				hashtbl_destroy(task_tbl);
+			return OPH_SERVER_WRONG_PARAMETER_ERROR;
+		}
+
+		char username[OPH_MAX_STRING_SIZE], workflowid[OPH_MAX_STRING_SIZE], oph_jobid[OPH_MAX_STRING_SIZE], *type = NULL, *value = NULL;
+		if (oph_tp_find_param_in_task_string(request, OPH_ARG_JOBID, oph_jobid)) {
+			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Unable to get %s\n", OPH_ARG_JOBID);
+			if (task_tbl)
+				hashtbl_destroy(task_tbl);
+			return OPH_SERVER_SYSTEM_ERROR;
+		}
+		int idjob = (int) strtol(oph_jobid, NULL, 10);
+
+		if (oph_tp_find_param_in_task_string(request, OPH_ARG_USERID, username)) {
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to get %s\n", OPH_ARG_USERID);
+			if (task_tbl)
+				hashtbl_destroy(task_tbl);
+			return OPH_SERVER_WRONG_PARAMETER_ERROR;
+		}
+		int id_user = (int) strtol(username, NULL, 10);
+
+		if (oph_tp_find_param_in_task_string(request, OPH_ARG_USERNAME, username)) {
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to get %s\n", OPH_ARG_USERNAME);
+			if (task_tbl)
+				hashtbl_destroy(task_tbl);
+			return OPH_SERVER_WRONG_PARAMETER_ERROR;
+		}
+
+		snprintf(workflowid, OPH_MAX_STRING_SIZE, "%d", wid);
+
+		int success = 0, success2 = 0;
+		oph_json *oper_json = NULL;
+		char error_message[OPH_MAX_STRING_SIZE], *user_filter = NULL, btype = 0;	// Get information about user-defined partitions
+		char *workers_number = NULL;
+		int n_workers = 1;
+		char **objkeys = NULL;
+		int objkeys_num = 0;
+		char random_name[OPH_SHORT_STRING_SIZE];
+
+		while (!success) {
+
+			if (!oph_pav_worker_deployment) {
+				snprintf(error_message, OPH_MAX_STRING_SIZE, "Dynamic pav_worker deployment is disabled!");
+				break;
+			}
+
+			type = hashtbl_get(task_tbl, OPH_ARG_ACTION);
+			if (!type) {
+				snprintf(error_message, OPH_MAX_STRING_SIZE, "Argument '%s' is not set\n", OPH_ARG_ACTION);
+				break;
+			}
+			if (!strcasecmp(type, OPH_OPERATOR_PAV_WORKER_PARAMETER_INFO_WORKERS))
+				btype = 1;	// Get all information about deployed workers
+			else if (!strcasecmp(type, OPH_OPERATOR_PAV_WORKER_PARAMETER_DEPLOY))
+				btype = 2;	// Allocate
+			else if (!strcasecmp(type, OPH_OPERATOR_PAV_WORKER_PARAMETER_UNDEPLOY))
+				btype = 3;	// Deallocate
+			else if (strcasecmp(type, OPH_OPERATOR_PAV_WORKER_PARAMETER_INFO)) {
+				snprintf(error_message, OPH_MAX_STRING_SIZE, "Wrong parameter '%s'!", OPH_ARG_ACTION);
+				break;
+			}
+
+			workers_number = hashtbl_get(task_tbl, OPH_OPERATOR_PARAMETER_WORKERS_NUMBER);
+			if (!workers_number) {
+				snprintf(error_message, OPH_MAX_STRING_SIZE, "Argument '%s' is not set\n", OPH_OPERATOR_PARAMETER_WORKERS_NUMBER);
+				break;
+			}
+			n_workers = (int) strtol(workers_number, NULL, 10);
+			if (n_workers < 0) {
+				snprintf(error_message, OPH_MAX_STRING_SIZE, "Wrong parameter '%s'!", OPH_OPERATOR_PARAMETER_WORKERS_NUMBER);
+				break;
+			}
+
+			user_filter = hashtbl_get(task_tbl, OPH_OPERATOR_PARAMETER_USER_FILTER);
+			if (!user_filter) {
+				snprintf(error_message, OPH_MAX_STRING_SIZE, "Argument '%s' is not set\n", OPH_OPERATOR_PARAMETER_USER_FILTER);
+				break;
+			}
+			if (!strcasecmp(user_filter, OPH_OPERATOR_PAV_WORKER_PARAMETER_ALL))
+				user_filter = NULL;
+
+			value = hashtbl_get(task_tbl, OPH_ARG_OBJKEY_FILTER);
+			if (!value) {
+				snprintf(error_message, OPH_MAX_STRING_SIZE, "Argument '%s' is not set\n", OPH_ARG_OBJKEY_FILTER);
+				break;
+			}
+			if (oph_tp_parse_multiple_value_param(value, &objkeys, &objkeys_num)) {
+				snprintf(error_message, OPH_MAX_STRING_SIZE, "Operator string not valid\n");
+				break;
+			}
+
+			success = 1;
+		}
+
+		ophidiadb oDB;
+		oph_odb_initialize_ophidiadb(&oDB);
+		if (oph_odb_read_config_ophidiadb(&oDB)) {
+			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Error in reading OphidiaDB params\n");
+			oph_odb_disconnect_from_ophidiadb(&oDB);
+			if (task_tbl)
+				hashtbl_destroy(task_tbl);
+			oph_tp_free_multiple_value_param_list(objkeys, objkeys_num);
+			return OPH_SERVER_SYSTEM_ERROR;
+		}
+		if (oph_odb_connect_to_ophidiadb(&oDB)) {
+			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Unable to connect to OphidiaDB\n");
+			oph_odb_disconnect_from_ophidiadb(&oDB);
+			if (task_tbl)
+				hashtbl_destroy(task_tbl);
+			oph_tp_free_multiple_value_param_list(objkeys, objkeys_num);
+			return OPH_SERVER_SYSTEM_ERROR;
+		}
+		oph_odb_start_job_fast(idjob, &oDB);
+
+		if (success && oph_json_alloc(&oper_json)) {
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "JSON alloc error\n");
+			success = 0;
+		}
+
+		ophidiadb_list list;
+		oph_odb_initialize_ophidiadb_list(&list);
+		ophidiadb_list user_list;
+		oph_odb_initialize_ophidiadb_list(&user_list);
+
+		if (success) {
+
+			success = 0;
+			while (!success) {
+
+				if (!orm) {
+					orm = (oph_rmanager *) malloc(sizeof(oph_rmanager));
+					if (initialize_rmanager(orm)) {
+						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error on initialization OphidiaDB\n");
+						snprintf(error_message, OPH_MAX_STRING_SIZE, "Internal error!");
+						break;
+					}
+					if (oph_read_rmanager_conf(orm)) {
+						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error on read resource manager parameters\n");
+						snprintf(error_message, OPH_MAX_STRING_SIZE, "Internal error!\n");
+						break;
+					}
+				}
+
+				int num_fields, iii, jjj = 0, idp;
+				int total_hosts = 0, reserved_hosts = 0, available_hosts = 0;
+				char **jsonkeys = NULL;
+				char **fieldtypes = NULL;
+				char **jsonvalues = NULL;
+				char tmp[OPH_MAX_STRING_SIZE];
+
+				switch (btype) {
+
+					case 0:{
+							snprintf(error_message, OPH_MAX_STRING_SIZE, "Option not available yet!");
+							break;
+						}
+
+					case 1:{
+							snprintf(error_message, OPH_MAX_STRING_SIZE, "Option not available yet!");
+							break;
+						}
+
+					case 2:{
+
+							int available_workers = 0;
+
+							if (oph_get_workers_number_by_status(&available_workers, "down")) {
+								pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Number of available workers cannot be retrieved\n");
+								snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to retrieve number of available workers!");
+								break;
+							}
+
+							if (!available_workers) {
+								snprintf(error_message, OPH_MAX_STRING_SIZE, "No workers available");
+								break;
+							} else {
+								if (n_workers <= available_workers) {
+									char command[OPH_MAX_STRING_SIZE];
+									snprintf(command, OPH_MAX_STRING_SIZE, "%d", 1);
+
+									char outfile[OPH_MAX_STRING_SIZE];
+									snprintf(outfile, OPH_MAX_STRING_SIZE, OPH_NULL_FILENAME);
+									if (get_debug_level() == LOG_DEBUG) {
+										char code[OPH_MAX_STRING_SIZE];
+										if (!oph_get_session_code(sessionid, code)) {
+											if (oph_subm_user && strcasecmp(os_username, oph_subm_user)) {
+												snprintf(outfile, OPH_MAX_STRING_SIZE, "%s/%s", oph_txt_location, os_username);
+												oph_mkdir(outfile);
+												snprintf(outfile, OPH_MAX_STRING_SIZE, "%s/" OPH_TXT_FILENAME, oph_txt_location, os_username, code, markerid);
+											} else
+												snprintf(outfile, OPH_MAX_STRING_SIZE, OPH_TXT_FILENAME, oph_txt_location, code, markerid);
+										}
+									}
+
+									char *cmd = NULL;
+									if (oph_form_subm_string(command, n_workers, outfile, 0, orm, idjob, os_username, project, wid, &cmd, 3)) {
+										pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error on forming submission string\n");
+										snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to set submission string!");
+										if (cmd) {
+											free(cmd);
+											cmd = NULL;
+										}
+										break;
+									}
+									if (!cmd) {
+										pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error on forming submission string\n");
+										snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to set submission string!");
+										break;
+									}
+
+									pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Submitting command: %s\n", cmd);
+
+									success = !system(cmd);
+									if(success) {
+										snprintf(error_message, OPH_MAX_STRING_SIZE, "Worker correctly deployed");
+										pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%s\n", error_message);
+									} else {
+										snprintf(error_message, OPH_MAX_STRING_SIZE, "Error during remote submission!");
+										pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%s\n", error_message);
+									}
+
+									free(cmd);
+								} else {
+									snprintf(error_message, OPH_MAX_STRING_SIZE, "Eccessive worker number: only %d worker%s available", available_workers,
+										available_workers == 1 ? " is" : "s are");
+									break;
+								}
+							}
+
+							if (!em)
+								oph_detach_task(idjob);
+
+							break;
+						}
+
+					case 3:{
+
+							int reserved_workers = 0;
+
+							if (oph_get_workers_number_by_status(&reserved_workers, "up")) {
+								pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Number of available workers cannot be retrieved\n");
+								snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to retrieve number of available workers!");
+								break;
+							}
+
+							if (!reserved_workers) {
+								snprintf(error_message, OPH_MAX_STRING_SIZE, "No workers reserved. Cannot undeploy workers");
+								break;
+							} else {
+								if (n_workers <= reserved_workers) {
+									char command[OPH_MAX_STRING_SIZE];
+									snprintf(command, OPH_MAX_STRING_SIZE, "%d", 1);
+
+									char outfile[OPH_MAX_STRING_SIZE];
+									snprintf(outfile, OPH_MAX_STRING_SIZE, OPH_NULL_FILENAME);
+									if (get_debug_level() == LOG_DEBUG) {
+										char code[OPH_MAX_STRING_SIZE];
+										if (!oph_get_session_code(sessionid, code)) {
+											if (oph_subm_user && strcasecmp(os_username, oph_subm_user)) {
+												snprintf(outfile, OPH_MAX_STRING_SIZE, "%s/%s", oph_txt_location, os_username);
+												oph_mkdir(outfile);
+												snprintf(outfile, OPH_MAX_STRING_SIZE, "%s/" OPH_TXT_FILENAME, oph_txt_location, os_username, code, markerid);
+											} else
+												snprintf(outfile, OPH_MAX_STRING_SIZE, OPH_TXT_FILENAME, oph_txt_location, code, markerid);
+										}
+									}
+
+									char *cmd = NULL;
+									if (oph_form_subm_string(command, n_workers, outfile, 0, orm, idjob, os_username, project, wid, &cmd, 4)) {
+										pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error on forming submission string\n");
+										snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to set submission string!");
+										if (cmd) {
+											free(cmd);
+											cmd = NULL;
+										}
+										break;
+									}
+									if (!cmd) {
+										pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error on forming submission string\n");
+										snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to set submission string!");
+										break;
+									}
+
+									pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Submitting command: %s\n", cmd);
+
+									success = !system(cmd);
+									if(success) {
+										snprintf(error_message, OPH_MAX_STRING_SIZE, "Worker correctly stopped");
+										pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%s\n", error_message);
+									} else {
+										snprintf(error_message, OPH_MAX_STRING_SIZE, "Error during remote submission!");
+										pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%s\n", error_message);
+									}
+
+									free(cmd);
+								} else {
+									snprintf(error_message, OPH_MAX_STRING_SIZE, "Eccessive worker number: only %d worker can be undeployed", reserved_workers);
+									break;
+								}
+							}
+
+							if (!em)
+								oph_detach_task(idjob);
+
+							break;
+						}
+
+					default:;
+				}
+
+				break;
+			}
+		}
+
+		oph_odb_free_ophidiadb_list(&list);
+		oph_odb_free_ophidiadb_list(&user_list);
+
+		while (!success2) {
+			if (oph_json_set_source(oper_json, "oph", "Ophidia", NULL, "Ophidia Data Source", username)) {
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "SET SOURCE error\n");
+				break;
+			}
+			char session_code[OPH_MAX_STRING_SIZE];
+			if (oph_get_session_code(sessionid, session_code)) {
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to get session code\n");
+				break;
+			}
+			if (oph_json_add_source_detail(oper_json, "Session Code", session_code)) {
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "ADD SOURCE DETAIL error\n");
+				break;
+			}
+			if (oph_json_add_source_detail(oper_json, "Workflow", workflowid)) {
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "ADD SOURCE DETAIL error\n");
+				break;
+			}
+			if (oph_json_add_source_detail(oper_json, "Marker", markerid)) {
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "ADD SOURCE DETAIL error\n");
+				break;
+			}
+			snprintf(oph_jobid, OPH_MAX_STRING_SIZE, "%s%s%s%s%s", sessionid, OPH_SESSION_WORKFLOW_DELIMITER, workflowid, OPH_SESSION_MARKER_DELIMITER, markerid);
+			if (oph_json_add_source_detail(oper_json, "JobID", oph_jobid)) {
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "ADD SOURCE DETAIL error\n");
+				break;
+			}
+			if (oph_json_add_consumer(oper_json, username)) {
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "ADD CONSUMER error\n");
+				break;
+			}
+
+			success2 = 1;
+		}
+
+		if (success)
+			success = success2;
+
+		if (task_tbl)
+			hashtbl_destroy(task_tbl);
+		oph_tp_free_multiple_value_param_list(objkeys, objkeys_num);
+
+		if (success)
+			*error_message = 0;
+		if (oph_finalize_known_operator(idjob, oper_json, operator_name, error_message, success, response, &oDB, exit_code))
+			return OPH_SERVER_SYSTEM_ERROR;
+
+		error = OPH_SERVER_NO_RESPONSE;
+
 	}
 
 	return error;

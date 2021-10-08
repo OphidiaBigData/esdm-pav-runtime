@@ -55,6 +55,8 @@ struct _oph_rmanager {
 	char *subm_queue_low;
 	char *subm_prefix;
 	char *subm_postfix;
+	char *subm_cmd_deploy_workers;
+	char *subm_cmd_undeploy_workers;
 	int subm_taskid;
 	oph_detached_task *subm_detached_tasks;
 };
@@ -80,5 +82,7 @@ int oph_system(const char *command, const char *error, struct oph_plugin_data *s
 int oph_detach_task(int id);
 int oph_is_detached_task(int id);
 int oph_remove_detached_task(int id);
+
+int oph_get_workers_number_by_status(int *workers_number, char *status);
 
 #endif				/* OPH_RMANAGER_H */

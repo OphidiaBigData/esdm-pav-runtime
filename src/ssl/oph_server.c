@@ -133,6 +133,7 @@ unsigned int oph_default_max_cores = OPH_DEFAULT_USER_MAX_CORES;
 unsigned int oph_default_max_hosts = OPH_DEFAULT_USER_MAX_HOSTS;
 unsigned int oph_default_session_timeout = OPH_DEFAULT_SESSION_TIMEOUT;
 char oph_cluster_deployment = 0;
+char oph_pav_worker_deployment = 0;
 char oph_auth_enabled = 1;
 char oph_cancel_all_enabled = 0;
 #ifdef OPH_OPENID_SUPPORT
@@ -375,6 +376,9 @@ int set_global_values(const char *configuration_file)
 	value = hashtbl_get(oph_server_params, OPH_SERVER_CONF_ENABLE_CLUSTER_DEPLOYMENT);
 	if (value && !strcasecmp(value, OPH_DEFAULT_YES))
 		oph_cluster_deployment = 1;
+	value = hashtbl_get(oph_server_params, OPH_SERVER_CONF_ENABLE_PAV_WORKER_DEPLOYMENT);
+	if (value && !strcasecmp(value, OPH_DEFAULT_YES))
+		oph_pav_worker_deployment = 1;
 	value = hashtbl_get(oph_server_params, OPH_SERVER_CONF_ENABLE_AUTHORIZATION);
 	if (value && !strcasecmp(value, OPH_DEFAULT_NO))
 		oph_auth_enabled = 0;

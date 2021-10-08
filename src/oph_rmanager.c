@@ -23,26 +23,30 @@
 #include "oph_service_info.h"
 #include "oph_utils.h"
 
+#include <sqlite3.h>
+
 #ifdef OPH_DB_SUPPORT
 #include <mysql.h>
 #endif
 #include <grp.h>
 
-#define SUBM_CMD_TO_SUBMIT		"SUBM_CMD_TO_SUBMIT"
-#define SUBM_CMD_TO_START		"SUBM_CMD_TO_START"
-#define SUBM_CMD_TO_MOUNT		"SUBM_CMD_TO_MOUNT"
-#define SUBM_CMD_TO_CANCEL		"SUBM_CMD_TO_CANCEL"
-#define SUBM_CMD_TO_STOP		"SUBM_CMD_TO_STOP"
-#define SUBM_CMD_TO_UMOUNT		"SUBM_CMD_TO_UMOUNT"
-#define SUBM_CMD_TO_CHECK		"SUBM_CMD_TO_CHECK"
-#define SUBM_CMD_TO_COUNT		"SUBM_CMD_TO_COUNT"
-#define SUBM_CMD_TO_CANCEL_ALL	"SUBM_CMD_TO_CANCEL_ALL"
-#define SUBM_MULTIUSER			"SUBM_MULTIUSER"
-#define SUBM_GROUP				"SUBM_GROUP"
-#define SUBM_QUEUE_HIGH			"SUBM_QUEUE_HIGH"
-#define SUBM_QUEUE_LOW			"SUBM_QUEUE_LOW"
-#define SUBM_PREFIX				"SUBM_PREFIX"
-#define SUBM_POSTFIX			"SUBM_POSTFIX"
+#define SUBM_CMD_TO_SUBMIT				"SUBM_CMD_TO_SUBMIT"
+#define SUBM_CMD_TO_START				"SUBM_CMD_TO_START"
+#define SUBM_CMD_TO_MOUNT				"SUBM_CMD_TO_MOUNT"
+#define SUBM_CMD_TO_CANCEL				"SUBM_CMD_TO_CANCEL"
+#define SUBM_CMD_TO_STOP				"SUBM_CMD_TO_STOP"
+#define SUBM_CMD_TO_UMOUNT				"SUBM_CMD_TO_UMOUNT"
+#define SUBM_CMD_TO_CHECK				"SUBM_CMD_TO_CHECK"
+#define SUBM_CMD_TO_COUNT				"SUBM_CMD_TO_COUNT"
+#define SUBM_CMD_TO_CANCEL_ALL			"SUBM_CMD_TO_CANCEL_ALL"
+#define SUBM_MULTIUSER					"SUBM_MULTIUSER"
+#define SUBM_GROUP						"SUBM_GROUP"
+#define SUBM_QUEUE_HIGH					"SUBM_QUEUE_HIGH"
+#define SUBM_QUEUE_LOW					"SUBM_QUEUE_LOW"
+#define SUBM_PREFIX						"SUBM_PREFIX"
+#define SUBM_POSTFIX					"SUBM_POSTFIX"
+#define SUBM_CMD_TO_DEPLOY_WORKERS      "SUBM_CMD_TO_DEPLOY_WORKERS"
+#define SUBM_CMD_TO_UNDEPLOY_WORKERS   	"SUBM_CMD_TO_UNDEPLOY_WORKERS"
 
 #define OPH_RMANAGER_SUDO			"sudo -u %s"
 #define OPH_RMANAGER_DEFAULT_QUEUE	"ophidia"
@@ -60,6 +64,9 @@ extern char *oph_server_port;
 extern oph_rmanager *orm;
 extern char *oph_subm_user;
 extern oph_service_info *service_info;
+
+extern char *db_location;
+int workers_n = 0;
 
 extern int oph_ssh_submit(const char *cmd);
 
@@ -281,6 +288,10 @@ int oph_read_rmanager_conf(oph_rmanager * orm)
 				orm->subm_prefix = target;
 			else if (!strcmp(buffer, SUBM_POSTFIX))
 				orm->subm_postfix = target;
+			else if (!strcmp(buffer, SUBM_CMD_TO_DEPLOY_WORKERS))
+				orm->subm_cmd_deploy_workers = target;
+			else if (!strcmp(buffer, SUBM_CMD_TO_UNDEPLOY_WORKERS))
+				orm->subm_cmd_undeploy_workers = target;
 			else {
 				pmesg(LOG_WARNING, __FILE__, __LINE__, "Parameter '%s' will be negleted\n", buffer);
 				free(target);
@@ -343,6 +354,8 @@ int initialize_rmanager(oph_rmanager * orm)
 	orm->subm_queue_low = NULL;
 	orm->subm_prefix = NULL;
 	orm->subm_postfix = NULL;
+	orm->subm_cmd_deploy_workers = NULL;
+	orm->subm_cmd_undeploy_workers = NULL;
 	orm->subm_taskid = 0;	// Used only for internal requests
 	orm->subm_detached_tasks = NULL;
 
@@ -562,7 +575,41 @@ int oph_form_subm_string(const char *request, const int ncores, char *outfile, s
 			}
 			command = orm->subm_cmd_mount;
 			break;
-		default:
+		case 3:{
+			if (!orm->subm_cmd_deploy_workers) {
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Parameter '%s' is not set\n", SUBM_CMD_TO_DEPLOY_WORKERS);
+				return RMANAGER_ERROR;
+			}
+			command = orm->subm_cmd_deploy_workers;
+
+			int len = OPH_MAX_STRING_SIZE + strlen(request);
+			if (!(*cmd = (char *) malloc(len * sizeof(char)))) {
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+				return RMANAGER_MEMORY_ERROR;
+			}
+
+			sprintf(*cmd, "%s %d", command, ncores);
+			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Submission string:\n%s\n", *cmd);
+
+			return RMANAGER_SUCCESS;
+		} case 4: {
+			if (!orm->subm_cmd_undeploy_workers) {
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Parameter '%s' is not set\n", SUBM_CMD_TO_DEPLOY_WORKERS);
+				return RMANAGER_ERROR;
+			}
+			command = orm->subm_cmd_undeploy_workers;
+
+			int len = OPH_MAX_STRING_SIZE + strlen(request);
+			if (!(*cmd = (char *) malloc(len * sizeof(char)))) {
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+				return RMANAGER_MEMORY_ERROR;
+			}
+
+			sprintf(*cmd, "%s %d", command, ncores);
+			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Submission string:\n%s\n", *cmd);
+
+			return RMANAGER_SUCCESS;
+		} default:
 			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unknown command type\n");
 			return RMANAGER_ERROR;
 	}
@@ -661,6 +708,14 @@ int free_oph_rmanager(oph_rmanager * orm)
 	if (orm->subm_postfix) {
 		free(orm->subm_postfix);
 		orm->subm_postfix = NULL;
+	}
+	if (orm->subm_cmd_deploy_workers) {
+		free(orm->subm_cmd_deploy_workers);
+		orm->subm_cmd_deploy_workers = NULL;
+	}
+	if (orm->subm_cmd_undeploy_workers) {
+		free(orm->subm_cmd_undeploy_workers);
+		orm->subm_cmd_undeploy_workers = NULL;
 	}
 	oph_detached_task *tmp;
 	while (orm->subm_detached_tasks) {
@@ -909,6 +964,45 @@ int oph_remove_detached_task(int id)
 			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Task %d removed from list of detached tasks\n", id);
 		}
 	}
+
+	return RMANAGER_SUCCESS;
+}
+
+int get_workers_info_callback(void *NotUsed, int argc, char **argv, char **azColName)
+{
+	UNUSED(NotUsed);
+	UNUSED(azColName);
+
+	if(argv[0])
+		workers_n = atoi(argv[0]);
+	else
+		workers_n = 0;
+
+	return 0;
+}
+
+int oph_get_workers_number_by_status(int *workers_number, char *status) {
+	if (!workers_number)
+		return RMANAGER_NULL_PARAM;
+	*workers_number = 0;
+
+	sqlite3 *db = NULL;
+	char *err_msg = 0;
+
+	if (sqlite3_open_v2(db_location, &db, SQLITE_OPEN_READWRITE, NULL) != SQLITE_OK) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Cannot open database. Database %s is locked or does not exist\n", db_location);
+		return RMANAGER_NULL_PARAM;
+	}
+
+	int neededSize = snprintf(NULL, 0, "SELECT COUNT(id_worker) FROM worker WHERE status=\"%s\";", status);
+	char *get_workers_info = (char *) malloc(neededSize + 1);
+	snprintf(get_workers_info, neededSize + 1, "SELECT COUNT(id_worker) FROM worker WHERE status=\"%s\";", status);
+
+	while (sqlite3_exec(db, get_workers_info, get_workers_info_callback, 0, &err_msg) != SQLITE_OK)
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "SQL error on select query: %s\n", err_msg);
+	free(get_workers_info);
+
+	*workers_number = workers_n;
 
 	return RMANAGER_SUCCESS;
 }

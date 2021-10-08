@@ -666,6 +666,9 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 					}
 			}
 			wf->tasks[i].is_known = 1;
+		} else if (!strncasecmp(wf->tasks[i].operator, OPH_OPERATOR_PAV_WORKER, OPH_MAX_STRING_SIZE)) {
+			oph_known_operator = OPH_PAV_WORKER_OPERATOR;
+			wf->tasks[i].is_known = 1;
 		} else
 			nstandardcommands++;
 	}
