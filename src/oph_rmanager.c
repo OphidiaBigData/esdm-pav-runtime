@@ -594,7 +594,7 @@ int oph_form_subm_string(const char *request, const int ncores, char *outfile, s
 			return RMANAGER_SUCCESS;
 		} case 4: {
 			if (!orm->subm_cmd_undeploy_workers) {
-				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Parameter '%s' is not set\n", SUBM_CMD_TO_DEPLOY_WORKERS);
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Parameter '%s' is not set\n", SUBM_CMD_TO_UNDEPLOY_WORKERS);
 				return RMANAGER_ERROR;
 			}
 			command = orm->subm_cmd_undeploy_workers;
