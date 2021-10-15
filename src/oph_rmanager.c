@@ -67,6 +67,7 @@ extern oph_service_info *service_info;
 
 extern char *db_location;
 int workers_n = 0;
+int list_index = 0;
 
 extern int oph_ssh_submit(const char *cmd);
 
@@ -1002,7 +1003,52 @@ int oph_get_workers_number_by_status(int *workers_number, char *status) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "SQL error on select query: %s\n", err_msg);
 	free(get_workers_info);
 
+	sqlite3_free(err_msg);
+	sqlite3_close(db);
+
 	*workers_number = workers_n;
+
+	return RMANAGER_SUCCESS;
+}
+
+int get_pidlist_info_callback(void *array, int argc, char **argv, char **azColName)
+{
+	UNUSED(azColName);
+
+	int *list = (int *) array;
+
+	if(argv[0]) {
+		list[list_index] = atoi(argv[0]);
+		list_index += 1;
+	}
+
+	return 0;
+}
+
+int get_worker_pidlist(int *pid_list, int workers_number) {
+	if (!pid_list)
+		return RMANAGER_NULL_PARAM;
+
+	sqlite3 *db = NULL;
+	char *err_msg = 0;
+
+	if (sqlite3_open_v2(db_location, &db, SQLITE_OPEN_READWRITE, NULL) != SQLITE_OK) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Cannot open database. Database %s is locked or does not exist\n", db_location);
+		return RMANAGER_NULL_PARAM;
+	}
+
+	int neededSize = snprintf(NULL, 0, "SELECT pid FROM worker LIMIT %d;", workers_number);
+	char *get_pidlist_info = (char *) malloc(neededSize + 1);
+	snprintf(get_pidlist_info, neededSize + 1, "SELECT pid FROM worker LIMIT %d;", workers_number);
+
+	while (sqlite3_exec(db, get_pidlist_info, get_pidlist_info_callback, pid_list, &err_msg) != SQLITE_OK)
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "SQL error on select query: %s\n", err_msg);
+	free(get_pidlist_info);
+
+	sqlite3_free(err_msg);
+	sqlite3_close(db);
+
+	list_index = 0;
 
 	return RMANAGER_SUCCESS;
 }

@@ -4681,7 +4681,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 							}
 
 							if (!available_workers) {
-								snprintf(error_message, OPH_MAX_STRING_SIZE, "No workers available");
+								snprintf(error_message, OPH_MAX_STRING_SIZE, "No available workers");
 								break;
 							} else {
 								if (n_workers <= available_workers) {
@@ -4775,34 +4775,46 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 										}
 									}
 
-									char *cmd = NULL;
-									if (oph_form_subm_string(command, n_workers, outfile, 0, orm, idjob, os_username, project, wid, &cmd, 4)) {
-										pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error on forming submission string\n");
-										snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to set submission string!");
-										if (cmd) {
-											free(cmd);
-											cmd = NULL;
+									int *worker_pidlist = (int *) malloc(sizeof(int) * n_workers);
+									if (get_worker_pidlist(worker_pidlist, n_workers)) {
+										pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to retrieve worker pid list!");
+										snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to retrieve worker pid list!");
+										break;
+									}
+
+									int ii;
+									for (ii=0; ii<n_workers; ii++) {
+										char *cmd = NULL;
+										if (oph_form_subm_string(command, worker_pidlist[ii], outfile, 0, orm, idjob, os_username, project, wid, &cmd, 4)) {
+											pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error on forming submission string\n");
+											snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to set submission string!");
+											if (cmd) {
+												free(cmd);
+												cmd = NULL;
+											}
+											break;
 										}
-										break;
-									}
-									if (!cmd) {
-										pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error on forming submission string\n");
-										snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to set submission string!");
-										break;
+										if (!cmd) {
+											pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error on forming submission string\n");
+											snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to set submission string!");
+											break;
+										}
+
+										pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Submitting command: %s\n", cmd);
+
+										success = !system(cmd);
+										if(success) {
+											snprintf(error_message, OPH_MAX_STRING_SIZE, "Worker correctly stopped");
+											pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%s\n", error_message);
+										} else {
+											snprintf(error_message, OPH_MAX_STRING_SIZE, "Error during remote submission!");
+											pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%s\n", error_message);
+										}
+
+										free(cmd);
 									}
 
-									pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Submitting command: %s\n", cmd);
-
-									success = !system(cmd);
-									if(success) {
-										snprintf(error_message, OPH_MAX_STRING_SIZE, "Worker correctly stopped");
-										pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%s\n", error_message);
-									} else {
-										snprintf(error_message, OPH_MAX_STRING_SIZE, "Error during remote submission!");
-										pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%s\n", error_message);
-									}
-
-									free(cmd);
+									free(worker_pidlist);
 								} else {
 									snprintf(error_message, OPH_MAX_STRING_SIZE, "Eccessive worker number: only %d worker can be undeployed", reserved_workers);
 									break;
