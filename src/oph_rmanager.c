@@ -1084,17 +1084,17 @@ int get_reserved_workers_tokill(int *out_list, int workers_number, int type) {
 	}
 
 	if(!type) { // LOCAL KILLER
-		int neededSize = snprintf(NULL, 0, "SELECT pid FROM worker WHERE pid != 0 LIMIT %d;", workers_number);
+		int neededSize = snprintf(NULL, 0, "SELECT pid FROM worker WHERE pid != 0 ORDER BY pid DESC LIMIT %d;", workers_number);
 		char *get_pidlist_info = (char *) malloc(neededSize + 1);
-		snprintf(get_pidlist_info, neededSize + 1, "SELECT pid FROM worker WHERE pid != 0 LIMIT %d;", workers_number);
+		snprintf(get_pidlist_info, neededSize + 1, "SELECT pid FROM worker WHERE pid != 0 ORDER BY pid DESC LIMIT %d;", workers_number);
 
 		while (sqlite3_exec(db, get_pidlist_info, get_kill_list_callback, out_list, &err_msg) != SQLITE_OK)
 			pmesg(LOG_ERROR, __FILE__, __LINE__, "SQL error on select query: %s\n", err_msg);
 		free(get_pidlist_info);
 	} else { // EXTERN KILLER
-		int neededSize = snprintf(NULL, 0, "SELECT count FROM worker WHERE count != 0 LIMIT %d;", workers_number);
+		int neededSize = snprintf(NULL, 0, "SELECT count FROM worker WHERE count != 0 ORDER BY count DESC LIMIT %d;", workers_number);
 		char *get_countlist_info = (char *) malloc(neededSize + 1);
-		snprintf(get_countlist_info, neededSize + 1, "SELECT count FROM worker WHERE count != 0 LIMIT %d;", workers_number);
+		snprintf(get_countlist_info, neededSize + 1, "SELECT count FROM worker WHERE count != 0 ORDER BY count DESC LIMIT %d;", workers_number);
 
 		while (sqlite3_exec(db, get_countlist_info, get_kill_list_callback, out_list, &err_msg) != SQLITE_OK)
 			pmesg(LOG_ERROR, __FILE__, __LINE__, "SQL error on select query: %s\n", err_msg);
