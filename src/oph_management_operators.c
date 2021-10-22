@@ -43,6 +43,7 @@ extern char oph_pav_worker_deployment;
 extern char *oph_txt_location;
 extern char *oph_subm_user;
 extern ophidiadb *ophDB;
+extern char *max_workers;
 
 extern int oph_finalize_known_operator(int idjob, oph_json * oper_json, const char *operator_name, char *error_message, int success, char **response, ophidiadb * oDB,
 				       enum oph__oph_odb_job_status *exit_code);
@@ -4672,80 +4673,75 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 
 					case 2:{
 
-							int available_workers = 0;
+							int reserved_workers = 0;
 
-							if (oph_get_workers_number_by_status(&available_workers, "down")) {
+							if (oph_get_workers_number_by_status(&reserved_workers, "up")) {
 								pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Number of available workers cannot be retrieved\n");
 								snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to retrieve number of available workers!");
 								break;
 							}
 
-							if (!available_workers) {
-								snprintf(error_message, OPH_MAX_STRING_SIZE, "No available workers");
-								break;
-							} else {
-								if (n_workers <= available_workers) {
-									char command[OPH_MAX_STRING_SIZE];
-									snprintf(command, OPH_MAX_STRING_SIZE, "%d", 1);
+							if (n_workers <= (atoi(max_workers) - reserved_workers)) {
+								char command[OPH_MAX_STRING_SIZE];
+								snprintf(command, OPH_MAX_STRING_SIZE, "%d", 1);
 
-									char outfile[OPH_MAX_STRING_SIZE];
-									snprintf(outfile, OPH_MAX_STRING_SIZE, OPH_NULL_FILENAME);
-									if (get_debug_level() == LOG_DEBUG) {
-										char code[OPH_MAX_STRING_SIZE];
-										if (!oph_get_session_code(sessionid, code)) {
-											if (oph_subm_user && strcasecmp(os_username, oph_subm_user)) {
-												snprintf(outfile, OPH_MAX_STRING_SIZE, "%s/%s", oph_txt_location, os_username);
-												oph_mkdir(outfile);
-												snprintf(outfile, OPH_MAX_STRING_SIZE, "%s/" OPH_TXT_FILENAME, oph_txt_location, os_username, code, markerid);
-											} else
-												snprintf(outfile, OPH_MAX_STRING_SIZE, OPH_TXT_FILENAME, oph_txt_location, code, markerid);
-										}
+								char outfile[OPH_MAX_STRING_SIZE];
+								snprintf(outfile, OPH_MAX_STRING_SIZE, OPH_NULL_FILENAME);
+								if (get_debug_level() == LOG_DEBUG) {
+									char code[OPH_MAX_STRING_SIZE];
+									if (!oph_get_session_code(sessionid, code)) {
+										if (oph_subm_user && strcasecmp(os_username, oph_subm_user)) {
+											snprintf(outfile, OPH_MAX_STRING_SIZE, "%s/%s", oph_txt_location, os_username);
+											oph_mkdir(outfile);
+											snprintf(outfile, OPH_MAX_STRING_SIZE, "%s/" OPH_TXT_FILENAME, oph_txt_location, os_username, code, markerid);
+										} else
+											snprintf(outfile, OPH_MAX_STRING_SIZE, OPH_TXT_FILENAME, oph_txt_location, code, markerid);
 									}
+								}
 
-									int max_count = 0;
+								int max_count = 0;
 
-									if (oph_get_max_count(&max_count)) {
-										pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to retrieve count values!\n");
-										snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to retrieve count values!");
+								if (oph_get_max_count(&max_count)) {
+									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to retrieve count values!\n");
+									snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to retrieve count values!");
+									break;
+								}
+
+								int ii;
+								for (ii=1; ii<=n_workers; ii++) {
+									char *cmd = NULL;
+									if (oph_form_subm_string(command, max_count + ii, outfile, 0, orm, idjob, os_username, project, wid, &cmd, 3)) {
+										pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error on forming submission string\n");
+										snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to set submission string!");
+										if (cmd) {
+											free(cmd);
+											cmd = NULL;
+										}
+										break;
+									}
+									if (!cmd) {
+										pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error on forming submission string\n");
+										snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to set submission string!");
 										break;
 									}
 
-									int ii;
-									for (ii=1; ii<=n_workers; ii++) {
-										char *cmd = NULL;
-										if (oph_form_subm_string(command, max_count + ii, outfile, 0, orm, idjob, os_username, project, wid, &cmd, 3)) {
-											pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error on forming submission string\n");
-											snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to set submission string!");
-											if (cmd) {
-												free(cmd);
-												cmd = NULL;
-											}
-											break;
-										}
-										if (!cmd) {
-											pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error on forming submission string\n");
-											snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to set submission string!");
-											break;
-										}
+									pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Submitting command: %s\n", cmd);
 
-										pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Submitting command: %s\n", cmd);
-
-										success = !system(cmd);
-										if(success) {
-											snprintf(error_message, OPH_MAX_STRING_SIZE, "Worker correctly deployed");
-											pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%s\n", error_message);
-										} else {
-											snprintf(error_message, OPH_MAX_STRING_SIZE, "Error during remote submission!");
-											pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%s\n", error_message);
-										}
-
-										free(cmd);
+									success = !system(cmd);
+									if(success) {
+										snprintf(error_message, OPH_MAX_STRING_SIZE, "Worker correctly deployed");
+										pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%s\n", error_message);
+									} else {
+										snprintf(error_message, OPH_MAX_STRING_SIZE, "Error during remote submission!");
+										pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%s\n", error_message);
 									}
-								} else {
-									snprintf(error_message, OPH_MAX_STRING_SIZE, "Eccessive worker number: only %d worker%s available", available_workers,
-										available_workers == 1 ? " is" : "s are");
-									break;
+
+									free(cmd);
 								}
+							} else {
+								snprintf(error_message, OPH_MAX_STRING_SIZE, "Eccessive workers number: only %d worker%s "
+									"available", atoi(max_workers) - reserved_workers, atoi(max_workers) - reserved_workers == 1 ? " is" : "s are");
+								break;
 							}
 
 							if (!em)
@@ -4831,7 +4827,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 
 									free(kill_list);
 								} else {
-									snprintf(error_message, OPH_MAX_STRING_SIZE, "Eccessive worker number: only %d worker can be undeployed", reserved_workers);
+									snprintf(error_message, OPH_MAX_STRING_SIZE, "Eccessive workers number: only %d worker can be undeployed", reserved_workers);
 									break;
 								}
 							}

@@ -60,6 +60,7 @@ char *master_port = NULL;
 char *rabbitmq_username = NULL;
 char *rabbitmq_password = NULL;
 char *rabbitmq_task_queue_name = NULL;
+char *max_workers = NULL;
 char *db_location = NULL;
 char *wid_tocancel = NULL;
 
@@ -134,6 +135,15 @@ int oph_rabbitmq_open_connection()
 		}
 	}
 	pmesg_safe(&rabbitmq_flag, LOG_INFO, __FILE__, __LINE__, "LOADED PARAM TASK_QUEUE_NAME: %s\n", rabbitmq_task_queue_name);
+
+	if (!max_workers) {
+		if (oph_server_conf_get_param(oph_rabbit_hashtbl, "MAX_WORKERS", &max_workers)) {
+			pmesg_safe(&rabbitmq_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to get MAX_WORKERS param\n");
+			oph_server_conf_unload(&oph_rabbit_hashtbl);
+			return 1;
+		}
+	}
+	pmesg_safe(&rabbitmq_flag, LOG_INFO, __FILE__, __LINE__, "LOADED PARAM MAX_WORKERS: %s\n", max_workers);
 
 	if (!db_location) {
 		if (oph_server_conf_get_param(oph_rabbit_hashtbl, "DATABASE_PATH", &db_location)) {
