@@ -66,6 +66,7 @@ extern char *oph_subm_user;
 extern oph_service_info *service_info;
 
 extern char *db_location;
+extern char *killer;
 int workers_n = 0;
 int max_count = 0;
 int list_index = 0;
@@ -607,11 +608,7 @@ int oph_form_subm_string(const char *request, const int ncores, char *outfile, s
 				return RMANAGER_MEMORY_ERROR;
 			}
 
-#ifdef LOCAL_KILLER_SUPPORT
-			sprintf(*cmd, "%s kill %d", command, ncores);
-#else
-			sprintf(*cmd, "%s bkill %d", command, ncores);
-#endif
+			sprintf(*cmd, "%s %s %d", command, killer, ncores);
 			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Submission string:\n%s\n", *cmd);
 
 			return RMANAGER_SUCCESS;
@@ -1071,8 +1068,8 @@ int get_kill_list_callback(void *array, int argc, char **argv, char **azColName)
 	return 0;
 }
 
-int get_reserved_workers_tokill(int *out_list, int workers_number, int type) {
-	if (!out_list)
+int get_reserved_workers_tokill(int *out_list, int workers_number, char *killer) {
+	if (!out_list || !killer)
 		return RMANAGER_NULL_PARAM;
 
 	sqlite3 *db = NULL;
@@ -1083,7 +1080,7 @@ int get_reserved_workers_tokill(int *out_list, int workers_number, int type) {
 		return RMANAGER_NULL_PARAM;
 	}
 
-	if(!type) { // LOCAL KILLER
+	if(!strcmp(killer, "kill")) { // LOCAL KILLER
 		int neededSize = snprintf(NULL, 0, "SELECT pid FROM worker WHERE pid != 0 ORDER BY pid DESC LIMIT %d;", workers_number);
 		char *get_pidlist_info = (char *) malloc(neededSize + 1);
 		snprintf(get_pidlist_info, neededSize + 1, "SELECT pid FROM worker WHERE pid != 0 ORDER BY pid DESC LIMIT %d;", workers_number);
@@ -1091,7 +1088,7 @@ int get_reserved_workers_tokill(int *out_list, int workers_number, int type) {
 		while (sqlite3_exec(db, get_pidlist_info, get_kill_list_callback, out_list, &err_msg) != SQLITE_OK)
 			pmesg(LOG_ERROR, __FILE__, __LINE__, "SQL error on select query: %s\n", err_msg);
 		free(get_pidlist_info);
-	} else { // EXTERN KILLER
+	} else if(!strcmp(killer, "bkill")) { // EXTERN KILLER
 		int neededSize = snprintf(NULL, 0, "SELECT count FROM worker WHERE count != 0 ORDER BY count DESC LIMIT %d;", workers_number);
 		char *get_countlist_info = (char *) malloc(neededSize + 1);
 		snprintf(get_countlist_info, neededSize + 1, "SELECT count FROM worker WHERE count != 0 ORDER BY count DESC LIMIT %d;", workers_number);
@@ -1099,6 +1096,9 @@ int get_reserved_workers_tokill(int *out_list, int workers_number, int type) {
 		while (sqlite3_exec(db, get_countlist_info, get_kill_list_callback, out_list, &err_msg) != SQLITE_OK)
 			pmesg(LOG_ERROR, __FILE__, __LINE__, "SQL error on select query: %s\n", err_msg);
 		free(get_countlist_info);
+	} else {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Killer %s is not supported\n", killer);
+		return RMANAGER_NULL_PARAM;
 	}
 
 	sqlite3_free(err_msg);

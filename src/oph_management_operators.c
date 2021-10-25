@@ -44,6 +44,7 @@ extern char *oph_txt_location;
 extern char *oph_subm_user;
 extern ophidiadb *ophDB;
 extern char *max_workers;
+extern char *killer;
 
 extern int oph_finalize_known_operator(int idjob, oph_json * oper_json, const char *operator_name, char *error_message, int success, char **response, ophidiadb * oDB,
 				       enum oph__oph_odb_job_status *exit_code);
@@ -4676,8 +4677,8 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 							int reserved_workers = 0;
 
 							if (oph_get_workers_number_by_status(&reserved_workers, "up")) {
-								pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Number of available workers cannot be retrieved\n");
-								snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to retrieve number of available workers!");
+								pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Number of reserved workers cannot be retrieved\n");
+								snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to retrieve number of reserved workers!");
 								break;
 							}
 
@@ -4755,8 +4756,8 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 							int reserved_workers = 0;
 
 							if (oph_get_workers_number_by_status(&reserved_workers, "up")) {
-								pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Number of available workers cannot be retrieved\n");
-								snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to retrieve number of available workers!");
+								pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Number of reserved workers cannot be retrieved\n");
+								snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to retrieve number of reserved workers!");
 								break;
 							}
 
@@ -4783,11 +4784,8 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 									}
 
 									int *kill_list = (int *) malloc(sizeof(int) * n_workers);
-#ifdef LOCAL_KILLER_SUPPORT
-									if (get_reserved_workers_tokill(kill_list, n_workers, 0)) {
-#else
-									if (get_reserved_workers_tokill(kill_list, n_workers, 1)) {
-#endif
+
+									if (get_reserved_workers_tokill(kill_list, n_workers, killer)) {
 										pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to retrieve workers to kill!");
 										snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to retrieve workers to kill!");
 										break;

@@ -284,9 +284,6 @@ liboph_management_operators_la_SOURCES = ../src/oph_management_operators.c
 liboph_management_operators_la_CFLAGS = -prefer-pic -I../src/ ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYSQL_CFLAGS) -I../src/oph_workflow
 liboph_management_operators_la_LDFLAGS = -shared
 liboph_management_operators_la_LIBADD = $(ADDITIONAL_LIBS) -L. -loph_workflow_engine
-if KILLER_SUPPORT
-liboph_management_operators_la_CFLAGS += -DLOCAL_KILLER_SUPPORT
-endif
 
 LIBRARY += liboph_known_operators.la
 liboph_known_operators_la_SOURCES = ../src/oph_known_operators.c

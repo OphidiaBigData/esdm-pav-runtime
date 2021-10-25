@@ -502,17 +502,6 @@ AM_CONDITIONAL([DB_SUPPORT], [test "x$db" = "xyes"])
 OPH_DB_SUPPORT=$db
 AC_SUBST(OPH_DB_SUPPORT)
 
-LOCAL_KILLER_SUPPORT=
-AC_ARG_ENABLE(local_killer, [ --disable-local_killer  Disable local killer support. (Enabled by default)], [ local_killer="no" ], [ local_killer="yes" ])
-if test "x$local_killer" = "xyes"; then
-	AC_MSG_NOTICE(LOCAL_KILLER enabled)
-else
-	AC_MSG_NOTICE(LOCAL_KILLER disabled)
-fi
-AM_CONDITIONAL([KILLER_SUPPORT], [test "x$local_killer" = "xyes"])
-LOCAL_KILLER_SUPPORT=$local_killer
-AC_SUBST(LOCAL_KILLER_SUPPORT)
-
 MULTI_NODE_SUPPORT=
 AC_ARG_ENABLE(multi_node, [ --enable-multi_node	Enable multi node support. (Disabled by default)], [ multi_node="yes" ], [ multi_node="no" ])
 if test "x$multi_node" = "xyes"; then

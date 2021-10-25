@@ -250,9 +250,6 @@ liboph_rmanager_la_SOURCES = oph_rmanager.c
 liboph_rmanager_la_CFLAGS = -prefer-pic -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYSQL_CFLAGS) -loph_service_info -Ioph_workflow
 liboph_rmanager_la_LDFLAGS = -shared
 liboph_rmanager_la_LIBADD = $(ADDITIONAL_LIBS) -L. -loph_ssh_submit -lutils
-if KILLER_SUPPORT
-liboph_rmanager_la_CFLAGS += -DLOCAL_KILLER_SUPPORT
-endif
 
 LIBRARY += liboph_subset_library.la
 liboph_subset_library_la_SOURCES = oph_subset_library.c
@@ -357,9 +354,6 @@ liboph_management_operators_la_SOURCES = oph_management_operators.c
 liboph_management_operators_la_CFLAGS = -prefer-pic -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYSQL_CFLAGS) -Ioph_workflow
 liboph_management_operators_la_LDFLAGS = -shared
 liboph_management_operators_la_LIBADD = $(ADDITIONAL_LIBS) -L. -loph_workflow_engine
-if KILLER_SUPPORT
-liboph_management_operators_la_CFLAGS += -DLOCAL_KILLER_SUPPORT
-endif
 
 LIBRARY += liboph_known_operators.la
 liboph_known_operators_la_SOURCES = oph_known_operators.c

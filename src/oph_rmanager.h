@@ -85,6 +85,6 @@ int oph_remove_detached_task(int id);
 
 int oph_get_workers_number_by_status(int *workers_number, char *status);
 int oph_get_max_count(int *count);
-int get_reserved_workers_tokill(int *out_list, int workers_number, int type);
+int get_reserved_workers_tokill(int *out_list, int workers_number, char *killer);
 
 #endif				/* OPH_RMANAGER_H */
