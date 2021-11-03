@@ -65,6 +65,10 @@ int oph_workflow_free(oph_workflow * workflow)
 		free(workflow->host_partition);
 		workflow->host_partition = NULL;
 	}
+	if (workflow->host_partition_orig) {
+		free(workflow->host_partition_orig);
+		workflow->host_partition_orig = NULL;
+	}
 	if (workflow->client_address) {
 		free(workflow->client_address);
 		workflow->client_address = NULL;
@@ -139,6 +143,10 @@ int oph_workflow_free(oph_workflow * workflow)
 	if (workflow->on_exit) {
 		free(workflow->on_exit);
 		workflow->on_exit = NULL;
+	}
+	if (workflow->checkpoint) {
+		free(workflow->checkpoint);
+		workflow->checkpoint = NULL;
 	}
 	if (workflow->exit_cubes) {
 		oph_trash_destroy(workflow->exit_cubes);
@@ -273,6 +281,10 @@ int oph_workflow_task_free(oph_workflow_task * task)
 	if (task->on_exit) {
 		free(task->on_exit);
 		task->on_exit = NULL;
+	}
+	if (task->checkpoint) {
+		free(task->checkpoint);
+		task->checkpoint = NULL;
 	}
 	if (task->query) {
 		free(task->query);
@@ -602,9 +614,11 @@ int oph_workflow_copy_task(oph_workflow_task * s, oph_workflow_task * d, int suf
 	}
 	if (s->vars && !((d->vars = hashtbl_duplicate(s->vars))))
 		return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
-	if (s->on_error && !((s->on_error = strdup(s->on_error))))
+	if (s->on_error && !((d->on_error = strdup(s->on_error))))
 		return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
-	if (s->on_exit && !((s->on_exit = strdup(s->on_exit))))
+	if (s->on_exit && !((d->on_exit = strdup(s->on_exit))))
+		return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+	if (s->checkpoint && !((d->checkpoint = strdup(s->checkpoint))))
 		return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 
 	return OPH_WORKFLOW_EXIT_SUCCESS;
