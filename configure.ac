@@ -492,7 +492,7 @@ OPH_AAA_SUPPORT=$aaa
 AC_SUBST(OPH_AAA_SUPPORT)
 
 OPH_DB_SUPPORT=
-AC_ARG_ENABLE(db, [  --disable-db	Disable Ophidia DB support. (Enabled by default)], [ db="no" ], [ db="yes" ])
+AC_ARG_ENABLE(db, [  --enable-db	Enable Ophidia DB support. (Disabeld by default)], [ db="yes" ], [ db="no" ])
 if test "x$db" = "xyes"; then
 	AC_MSG_NOTICE(Ophidia DB enabled)
 else
@@ -503,7 +503,7 @@ OPH_DB_SUPPORT=$db
 AC_SUBST(OPH_DB_SUPPORT)
 
 MULTI_NODE_SUPPORT=
-AC_ARG_ENABLE(multi_node, [ --enable-multi_node	Enable multi node support. (Disabled by default)], [ multi_node="yes" ], [ multi_node="no" ])
+AC_ARG_ENABLE(multi_node, [ --disable-multi_node	Disable multi node support. (Enabled by default)], [ multi_node="no" ], [ multi_node="yes" ])
 if test "x$multi_node" = "xyes"; then
 	AC_MSG_NOTICE(MULTI_NODE enabled)
 else
