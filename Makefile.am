@@ -54,8 +54,8 @@ CODE_COVERAGE_IGNORE_PATTERN = "*oph_server_test*"
 @CODE_COVERAGE_RULES@
 
 clean-local:
-	-rm -f *~ authz/*~ etc/*~ etc/cert/*~ etc/ophidia_dtd/*~ etc/rms/*~ etc/operators_xml/*~
+	-rm -f *~ authz/*~ etc/*~ etc/cert/*~ etc/ophidia_dtd/*~ etc/rms/*~ etc/operators_xml/*~ etc/script/*~
 
 distclean-local:
-	-rm -f *~ authz/*~ etc/*~ etc/cert/*~ etc/ophidia_dtd/*~ etc/rms/*~ etc/operators_xml/*~
+	-rm -f *~ authz/*~ etc/*~ etc/cert/*~ etc/ophidia_dtd/*~ etc/rms/*~ etc/operators_xml/*~ etc/script/*~
 

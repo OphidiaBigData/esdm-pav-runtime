@@ -1,0 +1,45 @@
+#!/bin/bash
+
+if [ -z "$1" ]
+then
+    echo "Usage: the RabbitMQ server directory is a mandatory parameter"
+    exit 0
+fi
+
+RABBITMQ_SERVER_PATH=$1
+RABBITMQ_USERNAME=esdmpav
+RABBITMQ_PASSWORD=esdmpav
+
+openssl req -newkey rsa:1024 \
+    -passout pass:abcd \
+    -subj "/" -sha1 \
+    -keyout @OPH_SERVER_LOCATION@/etc/cert/rootkey.pem \
+    -out @OPH_SERVER_LOCATION@/etc/cert/rootreq.pem
+openssl x509 -req -in @OPH_SERVER_LOCATION@/etc/cert/rootreq.pem \
+    -passin pass:abcd \
+    -sha1 -extensions v3_ca \
+    -signkey @OPH_SERVER_LOCATION@/etc/cert/rootkey.pem \
+    -out @OPH_SERVER_LOCATION@/etc/cert/rootcert.pem
+cat @OPH_SERVER_LOCATION@/etc/cert/rootcert.pem @OPH_SERVER_LOCATION@/etc/cert/rootkey.pem > @OPH_SERVER_LOCATION@/etc/cert/cacert.pem
+
+openssl req -newkey rsa:1024 \
+    -passout pass:abcd \
+    -subj "/" -sha1 \
+    -keyout @OPH_SERVER_LOCATION@/etc/cert/serverkey.pem \
+    -out @OPH_SERVER_LOCATION@/etc/cert/serverreq.pem
+openssl x509 -req \
+    -in @OPH_SERVER_LOCATION@/etc/cert/serverreq.pem \
+    -passin pass:abcd \
+    -sha1 -extensions usr_cert \
+    -CA @OPH_SERVER_LOCATION@/etc/cert/cacert.pem  \
+    -CAkey @OPH_SERVER_LOCATION@/etc/cert/cacert.pem \
+    -CAcreateserial \
+    -out @OPH_SERVER_LOCATION@/etc/cert/servercert.pem
+cat @OPH_SERVER_LOCATION@/etc/cert/servercert.pem @OPH_SERVER_LOCATION@/etc/cert/serverkey.pem @OPH_SERVER_LOCATION@/etc/cert/rootcert.pem > @OPH_SERVER_LOCATION@/etc/cert/myserver.pem
+
+echo -e "default_vhost = /\ndefault_user = $RABBITMQ_USERNAME\ndefault_pass = $RABBITMQ_PASSWORD\ndefault_user_tags.administrator = true\ndefault_permissions.configure = .\ndefault_permissions.read = .\ndefault_permissions.write = .*" > ${RABBITMQ_SERVER_PATH}/etc/rabbitmq/rabbitmq.conf
+
+echo -e "\nCert certificates have been generated in @OPH_SERVER_LOCATION@/etc/cert"
+echo "RabbitMQ credential have been generated in $RABBITMQ_SERVER_PATH/etc/rabbitmq/rabbitmq.conf"
+
+exit 0
