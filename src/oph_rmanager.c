@@ -980,7 +980,6 @@ int oph_remove_detached_task(int id)
 	return RMANAGER_SUCCESS;
 }
 
-<<<<<<< HEAD
 int get_workers_info_callback(void *NotUsed, int argc, char **argv, char **azColName)
 {
 	UNUSED(NotUsed);
@@ -1116,7 +1115,9 @@ int get_reserved_workers_tokill(int *out_list, int workers_number, char *killer)
 
 	list_index = 0;
 
-=======
+	return RMANAGER_SUCCESS;
+}
+
 // Unsafe
 int oph_load_datacube_status(int *jobs, int *tot, int *current, int size, int jobid)
 {
@@ -1180,6 +1181,5 @@ int oph_load_datacube_status(int *jobs, int *tot, int *current, int size, int jo
 		}
 	}
 
->>>>>>> devel
 	return RMANAGER_SUCCESS;
 }
