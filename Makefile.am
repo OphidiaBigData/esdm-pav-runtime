@@ -27,6 +27,9 @@ sysconf_DATA = etc/*.conf etc/oph_server_logrotate etc/esdm-pav-runtime-db.sql
 bindir=${prefix}/etc
 bin_SCRIPTS = etc/oph_server
 
+sbindir = $(prefix)/sbin
+sbin_SCRIPTS = etc/esdm_pav_config.sh etc/run_esdm_pav.sh
+
 scriptdir=${prefix}/etc/script
 dist_script_SCRIPTS = etc/script/*.sh
 

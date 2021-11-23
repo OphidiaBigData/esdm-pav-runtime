@@ -10,6 +10,8 @@ RABBITMQ_SERVER_PATH=$1
 RABBITMQ_USERNAME=esdmpav
 RABBITMQ_PASSWORD=esdmpav
 
+sed -i -e "s@RABBITMQ_SERVER_PATH=.*@RABBITMQ_SERVER_PATH=${RABBITMQ_SERVER_PATH}@g" @OPH_SERVER_LOCATION@/sbin/run_esdm_pav.sh
+
 openssl req -newkey rsa:1024 \
     -passout pass:abcd \
     -subj "/" -sha1 \
