@@ -67,11 +67,13 @@ extern oph_rmanager *orm;
 extern char *oph_subm_user;
 extern oph_service_info *service_info;
 
+#ifdef MULTI_NODE_SUPPORT
 extern char *db_location;
 extern char *killer;
 int workers_n = 0;
 int max_count = 0;
 int list_index = 0;
+#endif
 
 extern int oph_ssh_submit(const char *cmd);
 
@@ -583,6 +585,7 @@ int oph_form_subm_string(const char *request, const int ncores, char *outfile, s
 			}
 			command = orm->subm_cmd_mount;
 			break;
+#ifdef MULTI_NODE_SUPPORT
 		case 3:{
 			if (!orm->subm_cmd_deploy_workers) {
 				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Parameter '%s' is not set\n", SUBM_CMD_TO_DEPLOY_WORKERS);
@@ -617,7 +620,9 @@ int oph_form_subm_string(const char *request, const int ncores, char *outfile, s
 			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Submission string:\n%s\n", *cmd);
 
 			return RMANAGER_SUCCESS;
-		} default:
+		}
+#endif
+		default:
 			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unknown command type\n");
 			return RMANAGER_ERROR;
 	}
@@ -980,6 +985,7 @@ int oph_remove_detached_task(int id)
 	return RMANAGER_SUCCESS;
 }
 
+#ifdef MULTI_NODE_SUPPORT
 int get_workers_info_callback(void *NotUsed, int argc, char **argv, char **azColName)
 {
 	UNUSED(NotUsed);
@@ -1117,6 +1123,7 @@ int get_reserved_workers_tokill(int *out_list, int workers_number, char *killer)
 
 	return RMANAGER_SUCCESS;
 }
+#endif
 
 // Unsafe
 int oph_load_datacube_status(int *jobs, int *tot, int *current, int size, int jobid)

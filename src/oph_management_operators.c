@@ -43,8 +43,11 @@ extern char oph_pav_worker_deployment;
 extern char *oph_txt_location;
 extern char *oph_subm_user;
 extern ophidiadb *ophDB;
+
+#ifdef MULTI_NODE_SUPPORT
 extern char *max_workers;
 extern char *killer;
+#endif
 
 extern int oph_finalize_known_operator(int idjob, oph_json * oper_json, const char *operator_name, char *error_message, int success, char **response, ophidiadb * oDB,
 				       enum oph__oph_odb_job_status *exit_code);
@@ -4488,7 +4491,9 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 			return OPH_SERVER_SYSTEM_ERROR;
 
 		error = OPH_SERVER_NO_RESPONSE;
-	} else if (!strncasecmp(operator_name, OPH_OPERATOR_PAV_WORKER, OPH_MAX_STRING_SIZE)) {
+	}
+#ifdef MULTI_NODE_SUPPORT
+	else if (!strncasecmp(operator_name, OPH_OPERATOR_PAV_WORKER, OPH_MAX_STRING_SIZE)) {
 
 		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Execute known operator '%s'\n", operator_name);
 
@@ -4896,6 +4901,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 		error = OPH_SERVER_NO_RESPONSE;
 
 	}
+#endif
 
 	return error;
 }
