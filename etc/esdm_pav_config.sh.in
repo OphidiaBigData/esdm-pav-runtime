@@ -88,7 +88,6 @@ then
 else
     echo "CDO_PATH=${CDO_PATH}" >> @OPH_SERVER_LOCATION@/etc/oph_configuration
 fi
-sed -i -e "s@CDO_PATH=.*@CDO_PATH=${CDO_PATH}@g" @OPH_SERVER_LOCATION@/etc/oph_configuration
 
 openssl req -newkey rsa:1024 \
     -passout pass:abcd \
