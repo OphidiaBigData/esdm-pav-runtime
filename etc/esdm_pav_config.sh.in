@@ -1,18 +1,80 @@
 #!/bin/bash
 
-if [ -z "$1" ]
-then
-    echo "Usage: the RabbitMQ server directory is a mandatory parameter"
+usage() { echo "Usage: $0 [-r <RabbitMQ server path - mandatory>] [-u <RabbitMQ username (default=esdmpav)>] [-p <RabbitMQ password (default=esdmpav)>] [-k <Worker killer (default=kill)>] [-n <Worker thread number (default=10)>] [-w <Max worker number (default=10)>] [-c <CDO bin directory (default=)>]" 1>&2; exit 1; }
+
+while getopts ":r:u:p:k:n:w:c:" o; do
+    case "${o}" in
+        r)
+            RABBITMQ_SERVER_PATH=${OPTARG}
+            ;;
+        u)
+            username=${OPTARG}
+            ;;
+        p)
+            pswd=${OPTARG}
+            ;;
+        k)
+            killer=${OPTARG}
+            ;;
+        n)
+            w_thread_number=${OPTARG}
+            ;;
+        w)
+            w_number=${OPTARG}
+            ;;
+        c)
+            cdo_path=${OPTARG}
+            ;;
+        *)
+            usage
+            ;;
+    esac
+done
+shift $((OPTIND-1))
+
+if [ -z "${RABBITMQ_SERVER_PATH}" ] ; then
+    usage
     exit 0
 fi
 
-RABBITMQ_SERVER_PATH=$1
+if [ -z "$username" ]
+then
+    RABBITMQ_USERNAME=esdmpav
+else
+    RABBITMQ_USERNAME=${username}
+fi
+if [ -z "$pswd" ]
+then
+    RABBITMQ_PASSWORD=esdmpav
+else
+    RABBITMQ_PASSWORD=${pswd}
+fi
+if [ -z "$killer" ]
+then
+    KILLER=kill
+else
+    KILLER=${killer}
+fi
+if [ -z "$w_thread_number" ]
+then
+    WORKER_THREAD_NUMBER=10
+else
+    WORKER_THREAD_NUMBER=${w_thread_number}
+fi
+if [ -z "$w_number" ]
+then
+    MAX_WORKERS=10
+else
+    MAX_WORKERS=${w_number}
+fi
+if [ -z "$cdo_path" ]
+then
+    CDO_PATH=
+else
+    CDO_PATH=${cdo_path}
+fi
 
-RABBITMQ_USERNAME=esdmpav
-RABBITMQ_PASSWORD=esdmpav
-KILLER=kill
-WORKER_THREAD_NUMBER=10
-MAX_WORKERS=10
+CDO_PATH=$CDO_PATH
 
 sed -i -e "s@RABBITMQ_SERVER_PATH=.*@RABBITMQ_SERVER_PATH=${RABBITMQ_SERVER_PATH}@g" @OPH_SERVER_LOCATION@/sbin/run_esdm_pav.sh
 sed -i -e "s@RABBITMQ_USERNAME=.*@RABBITMQ_USERNAME=${RABBITMQ_USERNAME}@g" @OPH_SERVER_LOCATION@/etc/scheduler.conf
@@ -20,6 +82,13 @@ sed -i -e "s@RABBITMQ_PASSWORD=.*@RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD}@g" @OPH
 sed -i -e "s@KILLER=.*@KILLER=${KILLER}@g" @OPH_SERVER_LOCATION@/etc/scheduler.conf
 sed -i -e "s@WORKER_THREAD_NUMBER=.*@WORKER_THREAD_NUMBER=${WORKER_THREAD_NUMBER}@g" @OPH_SERVER_LOCATION@/etc/scheduler.conf
 sed -i -e "s@MAX_WORKERS=.*@MAX_WORKERS=${MAX_WORKERS}@g" @OPH_SERVER_LOCATION@/etc/scheduler.conf
+if grep -q "CDO_PATH" @OPH_SERVER_LOCATION@/etc/oph_configuration;
+then
+    sed -i -e "s@CDO_PATH=.*@CDO_PATH=${CDO_PATH}@g" @OPH_SERVER_LOCATION@/etc/oph_configuration
+else
+    echo "CDO_PATH=${CDO_PATH}" >> @OPH_SERVER_LOCATION@/etc/oph_configuration
+fi
+sed -i -e "s@CDO_PATH=.*@CDO_PATH=${CDO_PATH}@g" @OPH_SERVER_LOCATION@/etc/oph_configuration
 
 openssl req -newkey rsa:1024 \
     -passout pass:abcd \
@@ -52,5 +121,6 @@ echo -e "default_vhost = /\ndefault_user = $RABBITMQ_USERNAME\ndefault_pass = $R
 
 echo -e "\nCert certificates have been generated in @OPH_SERVER_LOCATION@/etc/cert"
 echo "RabbitMQ credential have been generated in $RABBITMQ_SERVER_PATH/etc/rabbitmq/rabbitmq.conf"
+echo -e "\nSet\n\tRABBITMQ_SERVER_PATH=$RABBITMQ_SERVER_PATH\n\tRABBITMQ_USERNAME=$RABBITMQ_USERNAME\n\tRABBITMQ_PASSWORD=$RABBITMQ_PASSWORD\n\tKILLER=$KILLER\n\tWORKER_THREAD_NUMBER=$WORKER_THREAD_NUMBER\n\tMAX_WORKERS=$MAX_WORKERS\n\tCDO_PATH=$CDO_PATH"
 
 exit 0
