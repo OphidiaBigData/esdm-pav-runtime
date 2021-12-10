@@ -324,9 +324,9 @@ int _system(const char *command)
 			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Fail to read ncores parameter\n");
 			return 1;
 		}
-		char *log_string = strtok_r(NULL, " ", &ptr);
-		if (!log_string) {
-			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Fail to read log_string parameter\n");
+		aaa = strtok_r(NULL, " ", &ptr);
+		if (!aaa) {
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Fail to read aaa parameter\n");
 			return 1;
 		}
 		char *submission_string = strtok_r(NULL, " ", &ptr);
@@ -358,9 +358,9 @@ int _system(const char *command)
 			return 1;
 #endif
 
-		int neededSize = snprintf(NULL, 0, "%s***%s***%s***%s***%s", submission_string, workflow_id, job_id, ncores, log_string);
+		int neededSize = snprintf(NULL, 0, "%s***%s***%s***%s***%s", submission_string, workflow_id, job_id, ncores);
 		char *final_message = (char *) malloc(neededSize + 1);
-		snprintf(final_message, neededSize + 1, "%s***%s***%s***%s***%s", submission_string, workflow_id, job_id, ncores, log_string);
+		snprintf(final_message, neededSize + 1, "%s***%s***%s***%s***%s", submission_string, workflow_id, job_id, ncores);
 
 #ifndef MULTI_RABBITMQ_CONN_SUPPORT
 		pthread_mutex_lock(&rabbitmq_flag);

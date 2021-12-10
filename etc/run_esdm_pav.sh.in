@@ -1,34 +1,46 @@
 #!/bin/bash
 
 RABBITMQ_SERVER_PATH=RABBITMQ_SERVER_PATH
-
 RUNTIME_MODE=$1
 
 if [ -z "${RUNTIME_MODE}" ]
-then
-    echo "Usage: the RUNTIME_MODE is a mandatory parameter"
-    exit 0
-fi
-
-if [ "$RUNTIME_MODE" = "master" ];
 then
     ${RABBITMQ_SERVER_PATH}/sbin/rabbitmq-server -detached
     echo "$RABBITMQ_SERVER_PATH/sbin/rabbitmq-server -detached"
     @OPH_SERVER_LOCATION@/bin/esdm_pav_runtime -d > /dev/null &
     echo "@OPH_SERVER_LOCATION@/bin/esdm_pav_runtime -d > /dev/null &"
-if [ "@UPDATE_CANCELLATION_SUPPORT@" = "yes" ];
-then
-    @OPH_SERVER_LOCATION@/bin/esdm_pav_runtime_dbmanager > /dev/null &
-    echo "@OPH_SERVER_LOCATION@/bin/esdm_pav_runtime_dbmanager > /dev/null &"
-fi
-elif [ "$RUNTIME_MODE" = "worker" ];
-then
-    ${RABBITMQ_SERVER_PATH}/sbin/rabbitmq-server -detached
-    echo "$RABBITMQ_SERVER_PATH/sbin/rabbitmq-server -detached"
+
+    if [ "@UPDATE_CANCELLATION_SUPPORT@" = "yes" ];
+    then
+        @OPH_SERVER_LOCATION@/bin/esdm_pav_runtime_dbmanager > /dev/null &
+        echo "@OPH_SERVER_LOCATION@/bin/esdm_pav_runtime_dbmanager > /dev/null &"
+    fi
+
     @OPH_SERVER_LOCATION@/bin/esdm_pav_runtime_worker > /dev/null &
     echo "@OPH_SERVER_LOCATION@/bin/esdm_pav_runtime_worker > /dev/null &"
+
+    exit 0
 else
-    echo "Usage: the RUNTIME_MODE can be either \"master\" or \"worker\""
+    if [ "$RUNTIME_MODE" = "master" ];
+    then
+        ${RABBITMQ_SERVER_PATH}/sbin/rabbitmq-server -detached
+        echo "$RABBITMQ_SERVER_PATH/sbin/rabbitmq-server -detached"
+        @OPH_SERVER_LOCATION@/bin/esdm_pav_runtime -d > /dev/null &
+        echo "@OPH_SERVER_LOCATION@/bin/esdm_pav_runtime -d > /dev/null &"
+    if [ "@UPDATE_CANCELLATION_SUPPORT@" = "yes" ];
+    then
+        @OPH_SERVER_LOCATION@/bin/esdm_pav_runtime_dbmanager > /dev/null &
+        echo "@OPH_SERVER_LOCATION@/bin/esdm_pav_runtime_dbmanager > /dev/null &"
+    fi
+    elif [ "$RUNTIME_MODE" = "worker" ];
+    then
+        ${RABBITMQ_SERVER_PATH}/sbin/rabbitmq-server -detached
+        echo "$RABBITMQ_SERVER_PATH/sbin/rabbitmq-server -detached"
+        @OPH_SERVER_LOCATION@/bin/esdm_pav_runtime_worker > /dev/null &
+        echo "@OPH_SERVER_LOCATION@/bin/esdm_pav_runtime_worker > /dev/null &"
+    else
+        echo "Usage: the RUNTIME_MODE can be either \"master\" or \"worker\""
+    fi
 fi
 
 exit 0
