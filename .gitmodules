@@ -1,4 +1,4 @@
 [submodule "ophidia-analytics-framework"]
 	path = ophidia-analytics-framework
 	url = https://github.com/OphidiaBigData/ophidia-analytics-framework.git
-	branch = merge-pav4_esdm_cdo
+	branch = esdm-pav
