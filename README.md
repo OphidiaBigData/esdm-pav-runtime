@@ -1,4 +1,4 @@
-# ESDM PAV Runtime 
+# ESDM-PAV Runtime 
 
 **Note**:
 
@@ -6,13 +6,12 @@ This is a fork of the [Ophidia Server](https://github.com/OphidiaBigData/ophidia
 
 ### Description
 
-The Ophidia Server is the Ophidia front-end. It supports WS-I and GSI/VOMS interfaces and works as a web service.
-It also provides user authorization and confidentialy (based on TLS/SSL protocol for WS-I).
-The module processes JSON Requests structured according to the Ophidia Workflow [JSON Schema](http://ophidia.cmcc.it/documentation/users/appendix/json_request.html) and returns [JSON Responses](http://ophidia.cmcc.it/documentation/users/appendix/json_response.html) back to clients.
+The ESDM-PAV runtime support the execution of data post-processing, analytics and visualisation (PAV) experiments in the field of climate and weather applications.
+It integrates the [Earth System Data Middleware (ESDM)](https://github.com/ESiWACE/esdm) for improved parallel data access for PAV use cases. The runtime can support complex experiments composed of multiple analytics tasks in the form of DAGs.
 
 ### Requirements
 
-In order to compile and run the ESDM PAV Runtime, make sure you have the following packages (all available through CentOS official repositories and the epel repository) properly installed:
+In order to compile and run the ESDM-PAV Runtime, make sure you have the following packages (all available through CentOS official repositories and the epel repository) properly installed:
 
 1. jansson and jansson-devel
 2. libxml2 and libxml2-devel
@@ -83,3 +82,8 @@ $ esdm_pav_runtime -h
 
 to see all other available options.
 
+
+Acknowledgement
+---------------
+
+This software has been developed starting from the [Ophidia Server](https://github.com/OphidiaBigData/ophidia-server) in the context of the *[ESiWACE2](http://www.esiwace.eu)* project: the *Centre of Excellence in Simulation of Weather and Climate in Europe phase 2*. ESiWACE2 has received funding from the European Union’s Horizon 2020 research and innovation programme under grant agreement No. 823988.
