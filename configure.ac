@@ -525,10 +525,12 @@ AC_SUBST(MULTI_NODE_SUPPORT)
 
 MULTI_RABBITMQ_CONN_SUPPORT=
 AC_ARG_ENABLE(multiple_connections, [ --enable-multiple_connections  Enable multiple RabbitMQ connection support. (Disabled by default)], [ multiple_connections="yes" ], [ multiple_connections="no" ])
+if test "x$multi_node" = "xyes"; then
 if test "x$multiple_connections" = "xyes"; then
 	AC_MSG_NOTICE(MULTI_RABBITMQ_CONN enabled)
 else
 	AC_MSG_NOTICE(MULTI_RABBITMQ_CONN disabled)
+fi
 fi
 AM_CONDITIONAL([MULTI_RABBITMQ_CONN], [test "x$multiple_connections" = "xyes"])
 MULTI_RABBITMQ_CONN_SUPPORT=$multiple_connections
@@ -536,10 +538,12 @@ AC_SUBST(MULTI_RABBITMQ_CONN_SUPPORT)
 
 UPDATE_CANCELLATION_SUPPORT=
 AC_ARG_ENABLE(update_cancellation, [ --disable-update_cancellation  Disable update and cancellation support. (Enabled by default)], [ update_cancellation="no" ], [ update_cancellation="yes" ])
+if test "x$multi_node" = "xyes"; then
 if test "x$update_cancellation" = "xyes"; then
 	AC_MSG_NOTICE(UPDATE_CANCELLATION enabled)
 else
 	AC_MSG_NOTICE(UPDATE_CANCELLATION disabled)
+fi
 fi
 AM_CONDITIONAL([UPDATE_CANCELLATION], [test "x$update_cancellation" = "xyes"])
 UPDATE_CANCELLATION_SUPPORT=$update_cancellation

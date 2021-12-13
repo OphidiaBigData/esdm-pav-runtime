@@ -358,9 +358,9 @@ int _system(const char *command)
 			return 1;
 #endif
 
-		int neededSize = snprintf(NULL, 0, "%s***%s***%s***%s***%s", submission_string, workflow_id, job_id, ncores);
+		int neededSize = snprintf(NULL, 0, "%s***%s***%s***%s", submission_string, workflow_id, job_id, ncores);
 		char *final_message = (char *) malloc(neededSize + 1);
-		snprintf(final_message, neededSize + 1, "%s***%s***%s***%s***%s", submission_string, workflow_id, job_id, ncores);
+		snprintf(final_message, neededSize + 1, "%s***%s***%s***%s", submission_string, workflow_id, job_id, ncores);
 
 #ifndef MULTI_RABBITMQ_CONN_SUPPORT
 		pthread_mutex_lock(&rabbitmq_flag);

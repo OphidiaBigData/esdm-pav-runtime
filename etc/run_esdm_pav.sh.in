@@ -1,63 +1,82 @@
-/*
-    ESDM-PAV Runtime
-    Copyright (C) 2020-2021 CMCC Foundation
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+#
+#   ESDM-PAV Runtime
+#   Copyright (C) 2020-2021 CMCC Foundation
+#
+#   This program is free software: you can redistribute it and/or modify
+#   it under the terms of the GNU General Public License as published by
+#   the Free Software Foundation, either version 3 of the License, or
+#   (at your option) any later version.
+#
+#   This program is distributed in the hope that it will be useful,
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#   GNU General Public License for more details.
+#
+#   You should have received a copy of the GNU General Public License
+#   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
 
 #!/bin/bash
 
-RABBITMQ_SERVER_PATH=RABBITMQ_SERVER_PATH
-RUNTIME_MODE=$1
-
-if [ -z "${RUNTIME_MODE}" ]
+if [ "@MULTI_NODE_SUPPORT@" = "yes" ];
 then
-    ${RABBITMQ_SERVER_PATH}/sbin/rabbitmq-server -detached
-    echo "$RABBITMQ_SERVER_PATH/sbin/rabbitmq-server -detached"
-    @OPH_SERVER_LOCATION@/bin/esdm_pav_runtime -d > /dev/null &
-    echo "@OPH_SERVER_LOCATION@/bin/esdm_pav_runtime -d > /dev/null &"
+    RABBITMQ_SERVER_PATH=RABBITMQ_SERVER_PATH
+    RUNTIME_MODE=$1
 
-    if [ "@UPDATE_CANCELLATION_SUPPORT@" = "yes" ];
+    if [ "$RABBITMQ_SERVER_PATH" = "RABBITMQ_SERVER_PATH" ];
     then
-        @OPH_SERVER_LOCATION@/bin/esdm_pav_runtime_dbmanager > /dev/null &
-        echo "@OPH_SERVER_LOCATION@/bin/esdm_pav_runtime_dbmanager > /dev/null &"
+        echo -e "\nYou have to launch the @OPH_SERVER_LOCATION@/sbin/esdm_pav_config.sh script first\n"
+        exit 0;
     fi
 
-    @OPH_SERVER_LOCATION@/bin/esdm_pav_runtime_worker > /dev/null &
-    echo "@OPH_SERVER_LOCATION@/bin/esdm_pav_runtime_worker > /dev/null &"
-
-    exit 0
-else
-    if [ "$RUNTIME_MODE" = "master" ];
+    if [ -z "${RUNTIME_MODE}" ]
     then
         ${RABBITMQ_SERVER_PATH}/sbin/rabbitmq-server -detached
         echo "$RABBITMQ_SERVER_PATH/sbin/rabbitmq-server -detached"
         @OPH_SERVER_LOCATION@/bin/esdm_pav_runtime -d > /dev/null &
         echo "@OPH_SERVER_LOCATION@/bin/esdm_pav_runtime -d > /dev/null &"
-    if [ "@UPDATE_CANCELLATION_SUPPORT@" = "yes" ];
-    then
-        @OPH_SERVER_LOCATION@/bin/esdm_pav_runtime_dbmanager > /dev/null &
-        echo "@OPH_SERVER_LOCATION@/bin/esdm_pav_runtime_dbmanager > /dev/null &"
-    fi
-    elif [ "$RUNTIME_MODE" = "worker" ];
-    then
-        ${RABBITMQ_SERVER_PATH}/sbin/rabbitmq-server -detached
-        echo "$RABBITMQ_SERVER_PATH/sbin/rabbitmq-server -detached"
+
+        if [ "@UPDATE_CANCELLATION_SUPPORT@" = "yes" ];
+        then
+            @OPH_SERVER_LOCATION@/bin/esdm_pav_runtime_dbmanager > /dev/null &
+            echo "@OPH_SERVER_LOCATION@/bin/esdm_pav_runtime_dbmanager > /dev/null &"
+        fi
+
         @OPH_SERVER_LOCATION@/bin/esdm_pav_runtime_worker > /dev/null &
         echo "@OPH_SERVER_LOCATION@/bin/esdm_pav_runtime_worker > /dev/null &"
+
+        exit 0
     else
-        echo "Usage: the RUNTIME_MODE can be either \"master\" or \"worker\""
+        if [ "$RUNTIME_MODE" = "master" ];
+        then
+            ${RABBITMQ_SERVER_PATH}/sbin/rabbitmq-server -detached
+            echo "$RABBITMQ_SERVER_PATH/sbin/rabbitmq-server -detached"
+            @OPH_SERVER_LOCATION@/bin/esdm_pav_runtime -d > /dev/null &
+            echo "@OPH_SERVER_LOCATION@/bin/esdm_pav_runtime -d > /dev/null &"
+        if [ "@UPDATE_CANCELLATION_SUPPORT@" = "yes" ];
+        then
+            @OPH_SERVER_LOCATION@/bin/esdm_pav_runtime_dbmanager > /dev/null &
+            echo "@OPH_SERVER_LOCATION@/bin/esdm_pav_runtime_dbmanager > /dev/null &"
+        fi
+        elif [ "$RUNTIME_MODE" = "worker" ];
+        then
+            ${RABBITMQ_SERVER_PATH}/sbin/rabbitmq-server -detached
+            echo "$RABBITMQ_SERVER_PATH/sbin/rabbitmq-server -detached"
+            @OPH_SERVER_LOCATION@/bin/esdm_pav_runtime_worker > /dev/null &
+            echo "@OPH_SERVER_LOCATION@/bin/esdm_pav_runtime_worker > /dev/null &"
+        else
+            echo "Usage: the RUNTIME_MODE can be either \"master\" or \"worker\""
+        fi
+    fi
+else
+    FILE1=@OPH_SERVER_LOCATION@/etc/cert/myserver.pem
+    FILE2=@OPH_SERVER_LOCATION@/etc/cert/cacert.pem
+
+    if [ -f "$FILE1" ] || [ -f "$FILE2" ]; then
+        @OPH_SERVER_LOCATION@/bin/esdm_pav_runtime -d > /dev/null &
+        echo "@OPH_SERVER_LOCATION@/bin/esdm_pav_runtime -d > /dev/null &"
+    else
+        echo -e "\nYou have to launch the @OPH_SERVER_LOCATION@/sbin/esdm_pav_config.sh script first\n"
     fi
 fi
 
