@@ -80,8 +80,8 @@ $ $prefix/sbin/esdm_pav_config.sh -r path/to/rabbitmqserver
 Note that it is possible to use the configuration script to set other system configuration parameters passing:
 * -u <RabbitMQ username (default=esdmpav)>
 * -p <RabbitMQ password (default=esdmpav)>
-* -k <Worker killer (default=kill)>: command used to kill the worker processes
-* -n <Worker thread number (default=10)>: maximum number of thread managed by each worker
+* -k <Worker kill command (default=kill)>: command used to kill the worker processes
+* -n <Worker threads number (default=10)>: maximum number of thread managed by each worker
 * -w <Max worker number (default=10)>
 * -c <CDO bin directory (default=)>]
 
