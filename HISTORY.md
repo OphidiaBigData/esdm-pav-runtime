@@ -1,3 +1,22 @@
+## v1.4.0 - 2021-12-16
+
+### Added:
+
+- Client to start and stop worker processes on HPC systems in multi-node setup
+- Scripts for initializing configuration and running the executables
+- Support for ESDM-based wait flow control operator
+- Support for experiment execution checkpointing
+- Support for task execution retry based on backoff
+- Support for task execution cancellation
+- Support for worker processes status tracking in multi-node setup
+
+### Changed:
+
+- Stronger integration with the Ophidia Analytics Framework
+- Improved support for more complex CDO commands
+- Improved overall multi-node execution management
+- Update runtime to support new JSON schema definition (e.g., checkpointing feature, error recovery, mandatory/optional parameters)
+- Improved configure options to semplify the installation process
 
 ## v1.2.0 - 2021-06-25
 
