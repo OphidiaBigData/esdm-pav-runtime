@@ -123,7 +123,7 @@ $ $prefix/bin/esdm_pav_runtime_worker &
 
 The last command can be executed on each node used for the computation. 
 
-To facilitate the properly launch of the various executables, the following script can be run:
+To facilitate launching the various executables, the following script can be run:
 
 ```
 $ $prefix/sbin/run_esdm_pav.sh
