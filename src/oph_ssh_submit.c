@@ -278,19 +278,30 @@ int _system(const char *command)
 
 #ifdef MULTI_NODE_SUPPORT
 	char *my_command = strdup(command);
-	char *ptr = NULL;
-	char *aaa = strtok_r(my_command, " ", &ptr);
-	if (!aaa) {
-		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Fail to read aaa parameter\n");
+
+	char *current = 0, *next = 0;
+
+	if (split_by_delimiter(my_command, ' ', 1, &current, &next) != 0) {
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Failed to split by delimiter\n");
 		return 1;
 	}
 
+	int neededSize = snprintf(NULL, 0, "%s", current);
+	char *aaa = (char *) malloc(neededSize + 1);
+	snprintf(aaa, neededSize + 1, "%s", current);
+	free(aaa);
+
 	if (strstr(command, "oph_cancel") != NULL) {
-		wid_tocancel = strtok_r(NULL, " ", &ptr);
-		if (!wid_tocancel) {
-			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Fail to read wid_tocancel parameter\n");
+		if (split_by_delimiter(next, ' ', 1, &current, &next) != 0) {
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Failed to split by delimiter\n");
 			return 1;
 		}
+
+		neededSize = snprintf(NULL, 0, "%s", current);
+		char *wid_tocancel = (char *) malloc(neededSize + 1);
+		snprintf(wid_tocancel, neededSize + 1, "%s", current);
+
+		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "WORKFLOW_ID to cancel: %s\n", wid_tocancel);
 
 		sqlite3 *db = NULL;
 		char *err_msg = 0;
@@ -302,7 +313,7 @@ int _system(const char *command)
 			return 1;
 		}
 
-		int neededSize = snprintf(NULL, 0, "SELECT ip_address, port, delete_queue_name FROM job_table GROUP BY ip_address, port, delete_queue_name;");
+		neededSize = snprintf(NULL, 0, "SELECT ip_address, port, delete_queue_name FROM job_table GROUP BY ip_address, port, delete_queue_name;");
 		char *select_distinct_sql = (char *) malloc(neededSize + 1);
 		snprintf(select_distinct_sql, neededSize + 1, "SELECT ip_address, port, delete_queue_name FROM job_table GROUP BY ip_address, port, delete_queue_name;");
 
@@ -312,43 +323,84 @@ int _system(const char *command)
 		sqlite3_close(db);
 		free(select_distinct_sql);
 
+		free(wid_tocancel);
+
 		return 0;
 	} else if (strstr(command, "submit_local.sh") != NULL) {
-		char *job_id = strtok_r(NULL, " ", &ptr);
-		if (!job_id) {
-			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Fail to read job_id parameter\n");
+		if (split_by_delimiter(next, ' ', 1, &current, &next) != 0) {
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Failed to split by delimiter\n");
 			return 1;
 		}
-		char *ncores = strtok_r(NULL, " ", &ptr);
-		if (!ncores) {
-			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Fail to read ncores parameter\n");
+
+		neededSize = snprintf(NULL, 0, "%s", current);
+		char *job_id = (char *) malloc(neededSize + 1);
+		snprintf(job_id, neededSize + 1, "%s", current);
+
+		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "JOB_ID: %s\n", job_id);
+
+		if (split_by_delimiter(next, ' ', 1, &current, &next) != 0) {
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Failed to split by delimiter\n");
 			return 1;
 		}
-		aaa = strtok_r(NULL, " ", &ptr);
-		if (!aaa) {
-			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Fail to read aaa parameter\n");
+
+		neededSize = snprintf(NULL, 0, "%s", current);
+		char *ncores = (char *) malloc(neededSize + 1);
+		snprintf(ncores, neededSize + 1, "%s", current);
+
+		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "NCORES: %s\n", ncores);
+
+		if (split_by_delimiter(next, ' ', 1, &current, &next) != 0) {
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Failed to split by delimiter\n");
 			return 1;
 		}
-		char *submission_string = strtok_r(NULL, " ", &ptr);
-		if (!submission_string) {
-			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Fail to read submission_string parameter\n");
+
+		neededSize = snprintf(NULL, 0, "%s", current);
+		aaa = (char *) malloc(neededSize + 1);
+		snprintf(aaa, neededSize + 1, "%s", current);
+		free(aaa);
+
+		if (split_by_delimiter(next, ' ', 1, &current, &next) != 0) {
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Failed to split by delimiter\n");
 			return 1;
 		}
-		aaa = strtok_r(NULL, " ", &ptr);
-		if (!aaa) {
-			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Fail to read aaa parameter\n");
+
+		neededSize = snprintf(NULL, 0, "%s", current);
+		char *submission_string = (char *) malloc(neededSize + 1);
+		snprintf(submission_string, neededSize + 1, "%s", current);
+
+		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "SUBMISSION_STRING: %s\n", submission_string);
+
+		if (split_by_delimiter(next, ' ', 1, &current, &next) != 0) {
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Failed to split by delimiter\n");
 			return 1;
 		}
-		aaa = strtok_r(NULL, " ", &ptr);
-		if (!aaa) {
-			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Fail to read aaa parameter\n");
+
+		neededSize = snprintf(NULL, 0, "%s", current);
+		aaa = (char *) malloc(neededSize + 1);
+		snprintf(aaa, neededSize + 1, "%s", current);
+		free(aaa);
+
+		if (split_by_delimiter(next, ' ', 1, &current, &next) != 0) {
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Failed to split by delimiter\n");
 			return 1;
 		}
-		char *workflow_id = strtok_r(NULL, " ", &ptr);
-		if (!workflow_id) {
-			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Fail to read workflow_id parameter\n");
+
+		neededSize = snprintf(NULL, 0, "%s", current);
+		aaa = (char *) malloc(neededSize + 1);
+		snprintf(aaa, neededSize + 1, "%s", current);
+		free(aaa);
+
+		if (split_by_delimiter(next, ' ', 1, &current, &next) != 0) {
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Failed to split by delimiter\n");
 			return 1;
 		}
+
+		neededSize = snprintf(NULL, 0, "%s", current);
+		char *workflow_id = (char *) malloc(neededSize + 1);
+		snprintf(workflow_id, neededSize + 1, "%s", current);
+
+		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "WORKFLOW_ID: %s\n", workflow_id);
+
 #ifdef MULTI_RABBITMQ_CONN_SUPPORT
 		amqp_connection_state_t multi_rabbitmq_publish_conn = NULL;
 		amqp_channel_t channel = 1;
@@ -358,7 +410,7 @@ int _system(const char *command)
 			return 1;
 #endif
 
-		int neededSize = snprintf(NULL, 0, "%s***%s***%s***%s", submission_string, workflow_id, job_id, ncores);
+		neededSize = snprintf(NULL, 0, "%s***%s***%s***%s", submission_string, workflow_id, job_id, ncores);
 		char *final_message = (char *) malloc(neededSize + 1);
 		snprintf(final_message, neededSize + 1, "%s***%s***%s***%s", submission_string, workflow_id, job_id, ncores);
 
@@ -401,6 +453,14 @@ int _system(const char *command)
 			free(final_message);
 		if (my_command)
 			free(my_command);
+		if (job_id)
+			free(job_id);
+		if (ncores)
+			free(ncores);
+		if (submission_string)
+			free(submission_string);
+		if (workflow_id)
+			free(workflow_id);
 
 #ifdef MULTI_RABBITMQ_CONN_SUPPORT
 		if (close_rabbitmq_connection(multi_rabbitmq_publish_conn, channel) == RABBITMQ_SUCCESS)

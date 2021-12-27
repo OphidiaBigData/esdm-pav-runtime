@@ -25,6 +25,7 @@
 #include <sys/types.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <string.h>
 
 pthread_mutex_t global_flag;
 
@@ -218,4 +219,39 @@ int get_number_queued_messages(char *hostname, char *port, char *username, char 
 		return RABBITMQ_FAILURE;
 	else
 		return messages;
+}
+
+int split_by_delimiter(char *message, char delimiter, int n_chars, char **result1, char **result2)
+{
+	if (!message) {
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Message to split is empty\n");
+		return 1;
+	}
+
+	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Splitting message: %s\n", message);
+
+	while (*message == delimiter)
+		message += 1;
+
+	int len = strlen(message);
+	int ii, n_ch = 0;
+
+	for (ii = 0; ii < len; ii++) {
+		if (*(message+ii) == delimiter)
+			n_ch ++;
+		else {
+			n_ch = 0;
+			continue;
+		}
+
+		if (n_ch == n_chars) {
+			*result1 = message;
+			*(*result1 + ii - n_chars + 1) = 0;
+			*result2 = message + ii + 1;
+
+			return 0;
+		}
+	}
+
+	return 1;
 }

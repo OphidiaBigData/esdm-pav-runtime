@@ -72,3 +72,5 @@ int close_rabbitmq_connection(amqp_connection_state_t conn, amqp_channel_t chann
  * \return                      Number of message in queue_name
  */
 int get_number_queued_messages(char *hostname, char *port, char *username, char *password, char *queue_name);
+
+int split_by_delimiter (char *message, char delimiter, int n_chars, char **result1, char **result2);
