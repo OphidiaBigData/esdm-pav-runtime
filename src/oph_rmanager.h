@@ -34,6 +34,17 @@
 
 #define OPH_NULL_FILENAME "/dev/null"
 
+#ifdef MULTI_NODE_SUPPORT
+typedef struct _worker_struct {
+	char *hostname;
+	char *port;
+	char *delete_queue_name;
+	char *status;
+	char *pid;
+	char *count;
+} worker_struct;
+#endif
+
 typedef struct _oph_detached_task {
 	int id;
 	struct _oph_detached_task *next;
@@ -88,5 +99,6 @@ int oph_remove_detached_task(int id);
 int oph_get_workers_number_by_status(int *workers_number, char *status);
 int oph_get_max_count(int *count);
 int get_reserved_workers_tokill(int *out_list, int workers_number, char *killer);
+int oph_get_workers_list_by_status(worker_struct **out_list, char *status);
 
 #endif				/* OPH_RMANAGER_H */

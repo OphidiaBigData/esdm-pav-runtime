@@ -72,8 +72,6 @@ extern oph_service_info *service_info;
 #ifdef MULTI_NODE_SUPPORT
 extern char *db_location;
 extern char *killer;
-int workers_n = 0;
-int max_count = 0;
 int list_index = 0;
 #endif
 
@@ -988,15 +986,16 @@ int oph_remove_detached_task(int id)
 }
 
 #ifdef MULTI_NODE_SUPPORT
-int get_workers_info_callback(void *NotUsed, int argc, char **argv, char **azColName)
+int get_single_param_callback(void *number, int argc, char **argv, char **azColName)
 {
-	UNUSED(NotUsed);
 	UNUSED(azColName);
 
+	int *result = (int *) number;
+
 	if(argv[0])
-		workers_n = atoi(argv[0]);
+		*result = atoi(argv[0]);
 	else
-		workers_n = 0;
+		*result = 0;
 
 	return 0;
 }
@@ -1009,38 +1008,21 @@ int oph_get_workers_number_by_status(int *workers_number, char *status) {
 	sqlite3 *db = NULL;
 	char *err_msg = 0;
 
-	if (sqlite3_open_v2(db_location, &db, SQLITE_OPEN_READWRITE, NULL) != SQLITE_OK) {
+	while (sqlite3_open_v2(db_location, &db, SQLITE_OPEN_READWRITE, NULL) != SQLITE_OK)
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "Cannot open database. Database %s is locked or does not exist\n", db_location);
-		return RMANAGER_NULL_PARAM;
-	}
 
 	int neededSize = snprintf(NULL, 0, "SELECT COUNT(id_worker) FROM worker WHERE status=\"%s\";", status);
 	char *get_workers_info = (char *) malloc(neededSize + 1);
 	snprintf(get_workers_info, neededSize + 1, "SELECT COUNT(id_worker) FROM worker WHERE status=\"%s\";", status);
 
-	while (sqlite3_exec(db, get_workers_info, get_workers_info_callback, 0, &err_msg) != SQLITE_OK)
+	while (sqlite3_exec(db, get_workers_info, get_single_param_callback, workers_number, &err_msg) != SQLITE_OK)
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "SQL error on select query: %s\n", err_msg);
 	free(get_workers_info);
 
 	sqlite3_free(err_msg);
 	sqlite3_close(db);
 
-	*workers_number = workers_n;
-
 	return RMANAGER_SUCCESS;
-}
-
-int get_max_count_callback(void *NotUsed, int argc, char **argv, char **azColName)
-{
-	UNUSED(NotUsed);
-	UNUSED(azColName);
-
-	if(argv[0])
-		max_count = atoi(argv[0]);
-	else
-		max_count = 0;
-
-	return 0;
 }
 
 int oph_get_max_count(int *count) {
@@ -1050,23 +1032,19 @@ int oph_get_max_count(int *count) {
 	sqlite3 *db = NULL;
 	char *err_msg = 0;
 
-	if (sqlite3_open_v2(db_location, &db, SQLITE_OPEN_READWRITE, NULL) != SQLITE_OK) {
+	while (sqlite3_open_v2(db_location, &db, SQLITE_OPEN_READWRITE, NULL) != SQLITE_OK)
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "Cannot open database. Database %s is locked or does not exist\n", db_location);
-		return RMANAGER_NULL_PARAM;
-	}
 
 	int neededSize = snprintf(NULL, 0, "SELECT MAX(count) FROM worker;");
 	char *get_max_count = (char *) malloc(neededSize + 1);
 	snprintf(get_max_count, neededSize + 1, "SELECT MAX(count) FROM worker;");
 
-	while (sqlite3_exec(db, get_max_count, get_max_count_callback, 0, &err_msg) != SQLITE_OK)
+	while (sqlite3_exec(db, get_max_count, get_single_param_callback, count, &err_msg) != SQLITE_OK)
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "SQL error on select query: %s\n", err_msg);
 	free(get_max_count);
 
 	sqlite3_free(err_msg);
 	sqlite3_close(db);
-
-	*count = max_count;
 
 	return RMANAGER_SUCCESS;
 }
@@ -1092,10 +1070,8 @@ int get_reserved_workers_tokill(int *out_list, int workers_number, char *killer)
 	sqlite3 *db = NULL;
 	char *err_msg = 0;
 
-	if (sqlite3_open_v2(db_location, &db, SQLITE_OPEN_READWRITE, NULL) != SQLITE_OK) {
+	while (sqlite3_open_v2(db_location, &db, SQLITE_OPEN_READWRITE, NULL) != SQLITE_OK)
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "Cannot open database. Database %s is locked or does not exist\n", db_location);
-		return RMANAGER_NULL_PARAM;
-	}
 
 	if(!strcmp(killer, "kill")) { // LOCAL KILLER
 		int neededSize = snprintf(NULL, 0, "SELECT pid FROM worker WHERE pid != 0 ORDER BY pid DESC LIMIT %d;", workers_number);
@@ -1122,6 +1098,77 @@ int get_reserved_workers_tokill(int *out_list, int workers_number, char *killer)
 	sqlite3_close(db);
 
 	list_index = 0;
+
+	return RMANAGER_SUCCESS;
+}
+
+int get_workers_list_by_status_callback(void *array, int argc, char **argv, char **azColName)
+{
+	UNUSED(argc);
+	UNUSED(azColName);
+
+	worker_struct *list = (worker_struct *) array;
+
+	int array_position = 0;
+
+	if (!argv[1] || !argv[2] || !argv[3] || !argv[4] || !argv[5] || !argv[6])
+		return 1;
+	else {
+		int neededSize = snprintf(NULL, 0, "%s", argv[1]);
+		(list + sizeof(worker_struct)*array_position)->hostname = (char *) malloc(neededSize + 1);
+		snprintf((list + sizeof(worker_struct)*array_position)->hostname, neededSize + 1, "%s", argv[1]);
+
+		neededSize = snprintf(NULL, 0, "%s", argv[2]);
+		(list + sizeof(worker_struct)*array_position)->port = (char *) malloc(neededSize + 1);
+		snprintf((list + sizeof(worker_struct)*array_position)->port, neededSize + 1, "%s", argv[2]);
+
+		neededSize = snprintf(NULL, 0, "%s", argv[3]);
+		(list + sizeof(worker_struct)*array_position)->delete_queue_name = (char *) malloc(neededSize + 1);
+		snprintf((list + sizeof(worker_struct)*array_position)->delete_queue_name, neededSize + 1, "%s", argv[3]);
+
+		neededSize = snprintf(NULL, 0, "%s", argv[4]);
+		(list + sizeof(worker_struct)*array_position)->status = (char *) malloc(neededSize + 1);
+		snprintf((list + sizeof(worker_struct)*array_position)->status, neededSize + 1, "%s", argv[4]);
+
+		neededSize = snprintf(NULL, 0, "%s", argv[5]);
+		(list + sizeof(worker_struct)*array_position)->pid = (char *) malloc(neededSize + 1);
+		snprintf((list + sizeof(worker_struct)*array_position)->pid, neededSize + 1, "%s", argv[5]);
+
+		neededSize = snprintf(NULL, 0, "%s", argv[6]);
+		(list + sizeof(worker_struct)*array_position)->count = (char *) malloc(neededSize + 1);
+		snprintf((list + sizeof(worker_struct)*array_position)->count, neededSize + 1, "%s", argv[6]);
+
+		array_position ++;
+	}
+
+	return 0;
+}
+
+int oph_get_workers_list_by_status(worker_struct **out_list, char *status) {
+	sqlite3 *db = NULL;
+	char *err_msg = 0;
+
+	while (sqlite3_open_v2(db_location, &db, SQLITE_OPEN_READWRITE, NULL) != SQLITE_OK)
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Cannot open database. Database %s is locked or does not exist\n", db_location);
+
+	int workers_number;
+	if (oph_get_workers_number_by_status(&workers_number, status)) {
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Number of reserved workers cannot be retrieved\n");
+		return RMANAGER_ERROR;
+	}
+
+	*out_list = (worker_struct *) malloc(sizeof(worker_struct) * workers_number);
+
+	int neededSize = snprintf(NULL, 0, "SELECT * FROM worker WHERE status=\"%s\";", status);
+	char *get_workers_list_by_status = (char *) malloc(neededSize + 1);
+	snprintf(get_workers_list_by_status, neededSize + 1, "SELECT * FROM worker WHERE status=\"%s\";", status);
+
+	while (sqlite3_exec(db, get_workers_list_by_status, get_workers_list_by_status_callback, *out_list, &err_msg) != SQLITE_OK)
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "SQL error on select query: %s\n", err_msg);
+	free(get_workers_list_by_status);
+
+	sqlite3_free(err_msg);
+	sqlite3_close(db);
 
 	return RMANAGER_SUCCESS;
 }
