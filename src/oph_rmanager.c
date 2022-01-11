@@ -73,6 +73,7 @@ extern oph_service_info *service_info;
 extern char *db_location;
 extern char *killer;
 int list_index = 0;
+int out_list_len = 0;
 #endif
 
 extern int oph_ssh_submit(const char *cmd);
@@ -1102,49 +1103,51 @@ int get_reserved_workers_tokill(int *out_list, int workers_number, char *killer)
 	return RMANAGER_SUCCESS;
 }
 
-int get_workers_list_by_status_callback(void *array, int argc, char **argv, char **azColName)
+int get_workers_list_by_query_callback(void *array, int argc, char **argv, char **azColName)
 {
 	UNUSED(argc);
 	UNUSED(azColName);
 
 	worker_struct *list = (worker_struct *) array;
 
-	int array_position = 0;
-
-	if (!argv[1] || !argv[2] || !argv[3] || !argv[4] || !argv[5] || !argv[6])
+	if (!argv[0] || !argv[1] || !argv[2] || !argv[3] || !argv[4] || !argv[5] || !argv[6])
 		return 1;
 	else {
-		int neededSize = snprintf(NULL, 0, "%s", argv[1]);
-		(list + sizeof(worker_struct)*array_position)->hostname = (char *) malloc(neededSize + 1);
-		snprintf((list + sizeof(worker_struct)*array_position)->hostname, neededSize + 1, "%s", argv[1]);
+		int neededSize = snprintf(NULL, 0, "%s", argv[0]);
+		(list + sizeof(worker_struct)*out_list_len)->id_worker = (char *) malloc(neededSize + 1);
+		snprintf((list + sizeof(worker_struct)*out_list_len)->id_worker, neededSize + 1, "%s", argv[0]);
+
+		neededSize = snprintf(NULL, 0, "%s", argv[1]);
+		(list + sizeof(worker_struct)*out_list_len)->hostname = (char *) malloc(neededSize + 1);
+		snprintf((list + sizeof(worker_struct)*out_list_len)->hostname, neededSize + 1, "%s", argv[1]);
 
 		neededSize = snprintf(NULL, 0, "%s", argv[2]);
-		(list + sizeof(worker_struct)*array_position)->port = (char *) malloc(neededSize + 1);
-		snprintf((list + sizeof(worker_struct)*array_position)->port, neededSize + 1, "%s", argv[2]);
+		(list + sizeof(worker_struct)*out_list_len)->port = (char *) malloc(neededSize + 1);
+		snprintf((list + sizeof(worker_struct)*out_list_len)->port, neededSize + 1, "%s", argv[2]);
 
 		neededSize = snprintf(NULL, 0, "%s", argv[3]);
-		(list + sizeof(worker_struct)*array_position)->delete_queue_name = (char *) malloc(neededSize + 1);
-		snprintf((list + sizeof(worker_struct)*array_position)->delete_queue_name, neededSize + 1, "%s", argv[3]);
+		(list + sizeof(worker_struct)*out_list_len)->delete_queue_name = (char *) malloc(neededSize + 1);
+		snprintf((list + sizeof(worker_struct)*out_list_len)->delete_queue_name, neededSize + 1, "%s", argv[3]);
 
 		neededSize = snprintf(NULL, 0, "%s", argv[4]);
-		(list + sizeof(worker_struct)*array_position)->status = (char *) malloc(neededSize + 1);
-		snprintf((list + sizeof(worker_struct)*array_position)->status, neededSize + 1, "%s", argv[4]);
+		(list + sizeof(worker_struct)*out_list_len)->status = (char *) malloc(neededSize + 1);
+		snprintf((list + sizeof(worker_struct)*out_list_len)->status, neededSize + 1, "%s", argv[4]);
 
 		neededSize = snprintf(NULL, 0, "%s", argv[5]);
-		(list + sizeof(worker_struct)*array_position)->pid = (char *) malloc(neededSize + 1);
-		snprintf((list + sizeof(worker_struct)*array_position)->pid, neededSize + 1, "%s", argv[5]);
+		(list + sizeof(worker_struct)*out_list_len)->pid = (char *) malloc(neededSize + 1);
+		snprintf((list + sizeof(worker_struct)*out_list_len)->pid, neededSize + 1, "%s", argv[5]);
 
 		neededSize = snprintf(NULL, 0, "%s", argv[6]);
-		(list + sizeof(worker_struct)*array_position)->count = (char *) malloc(neededSize + 1);
-		snprintf((list + sizeof(worker_struct)*array_position)->count, neededSize + 1, "%s", argv[6]);
+		(list + sizeof(worker_struct)*out_list_len)->count = (char *) malloc(neededSize + 1);
+		snprintf((list + sizeof(worker_struct)*out_list_len)->count, neededSize + 1, "%s", argv[6]);
 
-		array_position ++;
+		out_list_len ++;
 	}
 
 	return 0;
 }
 
-int oph_get_workers_list_by_status(worker_struct **out_list, char *status) {
+int oph_get_workers_list_by_query_status (worker_struct **out_list, int *len, char *status, char *query) {
 	sqlite3 *db = NULL;
 	char *err_msg = 0;
 
@@ -1153,22 +1156,25 @@ int oph_get_workers_list_by_status(worker_struct **out_list, char *status) {
 
 	int workers_number;
 	if (oph_get_workers_number_by_status(&workers_number, status)) {
-		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Number of reserved workers cannot be retrieved\n");
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Number of workers cannot be retrieved\n");
 		return RMANAGER_ERROR;
 	}
 
+	if (workers_number == 0)
+		return RMANAGER_SUCCESS;
+
+	out_list_len = 0;
 	*out_list = (worker_struct *) malloc(sizeof(worker_struct) * workers_number);
 
-	int neededSize = snprintf(NULL, 0, "SELECT * FROM worker WHERE status=\"%s\";", status);
-	char *get_workers_list_by_status = (char *) malloc(neededSize + 1);
-	snprintf(get_workers_list_by_status, neededSize + 1, "SELECT * FROM worker WHERE status=\"%s\";", status);
+	pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Executing query: %s\n", query);
 
-	while (sqlite3_exec(db, get_workers_list_by_status, get_workers_list_by_status_callback, *out_list, &err_msg) != SQLITE_OK)
+	while (sqlite3_exec(db, query, get_workers_list_by_query_callback, *out_list, &err_msg) != SQLITE_OK)
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "SQL error on select query: %s\n", err_msg);
-	free(get_workers_list_by_status);
 
 	sqlite3_free(err_msg);
 	sqlite3_close(db);
+
+	*len = out_list_len;
 
 	return RMANAGER_SUCCESS;
 }

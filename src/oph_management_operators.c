@@ -4856,8 +4856,10 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 							}
 
 							worker_struct *reserved_list = NULL;
+							int list_len = 0;
 							if (reserved_workers > 0) {
-								if (oph_get_workers_list_by_status(&reserved_list, "up")) {
+								if (oph_get_workers_list_by_query_status(&reserved_list, &list_len, "up",
+										"SELECT * FROM worker WHERE status=\"up\";")) {
 									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Number of reserved workers cannot be retrieved\n");
 									snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to retrieve number of reserved workers!");
 									break;
@@ -5085,7 +5087,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 									success = 0;
 								if (!success) {
 									int ii;
-									for (ii=0; ii < reserved_workers; ii++) {
+									for (ii=0; ii < list_len; ii++) {
 										jsonvalues = (char **) malloc(sizeof(char *) * num_fields);
 										if (!jsonvalues) {
 											pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
@@ -5183,9 +5185,25 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 								}
 							}
 
+							if (reserved_list) {
+								int jj;
+								for (jj=0; jj < list_len; jj++) {
+									free((reserved_list + sizeof(worker_struct)*jj)->id_worker);
+									free((reserved_list + sizeof(worker_struct)*jj)->hostname);
+									free((reserved_list + sizeof(worker_struct)*jj)->port);
+									free((reserved_list + sizeof(worker_struct)*jj)->delete_queue_name);
+									free((reserved_list + sizeof(worker_struct)*jj)->status);
+									free((reserved_list + sizeof(worker_struct)*jj)->pid);
+									free((reserved_list + sizeof(worker_struct)*jj)->count);
+									free(reserved_list + sizeof(worker_struct)*jj);
+								}
+							}
+
 							worker_struct *avail_list = NULL;
+							list_len = 0;
 							if (avail_workers > 0) {
-								if (oph_get_workers_list_by_status(&avail_list, "down")) {
+								if (oph_get_workers_list_by_query_status (&avail_list, &list_len, "down",
+										"SELECT * FROM worker WHERE status=\"down\";")) {
 									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Number of available workers cannot be retrieved\n");
 									snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to retrieve number of available workers!");
 									break;
@@ -5386,7 +5404,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 									success = 0;
 								if (!success) {
 									int ii;
-									for (ii=0; ii < avail_workers; ii++) {
+									for (ii=0; ii < list_len; ii++) {
 										jsonvalues = (char **) malloc(sizeof(char *) * num_fields);
 										if (!jsonvalues) {
 											pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
@@ -5473,22 +5491,10 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 								}
 							}
 
-							if (reserved_list) {
-								int jj;
-								for (jj=0; jj < reserved_workers; jj++) {
-									free((reserved_list + sizeof(worker_struct)*jj)->hostname);
-									free((reserved_list + sizeof(worker_struct)*jj)->port);
-									free((reserved_list + sizeof(worker_struct)*jj)->delete_queue_name);
-									free((reserved_list + sizeof(worker_struct)*jj)->status);
-									free((reserved_list + sizeof(worker_struct)*jj)->pid);
-									free((reserved_list + sizeof(worker_struct)*jj)->count);
-									free(reserved_list + sizeof(worker_struct)*jj);
-								}
-							}
-
 							if (avail_list) {
 								int jj;
-								for (jj=0; jj < avail_workers; jj++) {
+								for (jj=0; jj < list_len; jj++) {
+									free((avail_list + sizeof(worker_struct)*jj)->id_worker);
 									free((avail_list + sizeof(worker_struct)*jj)->hostname);
 									free((avail_list + sizeof(worker_struct)*jj)->port);
 									free((avail_list + sizeof(worker_struct)*jj)->delete_queue_name);
@@ -5615,47 +5621,203 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 										}
 									}
 
-									int *kill_list = (int *) malloc(sizeof(int) * n_workers);
-
-									if (get_reserved_workers_tokill(kill_list, n_workers, killer)) {
-										pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to retrieve workers to kill!");
-										snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to retrieve workers to kill!");
+									worker_struct *idle_list = NULL;
+									int list_len = 0;
+									if (oph_get_workers_list_by_query_status(&idle_list, &list_len, "up",
+											"SELECT * FROM worker WHERE id_worker NOT IN (select id_worker from job);")) {
+										pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Number of idle workers cannot be retrieved\n");
+										snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to retrieve number of idle workers!");
 										break;
 									}
 
-									int ii;
-									for (ii=0; ii<n_workers; ii++) {
-										char *cmd = NULL;
-										if (oph_form_subm_string(command, kill_list[ii], outfile, 0, orm, idjob, os_username, project, wid, &cmd, 4)) {
-											pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error on forming submission string\n");
-											snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to set submission string!");
-											if (cmd) {
-												free(cmd);
-												cmd = NULL;
+									if (list_len == 0) { // NO IDLE WORKERS. UNDEPLOY WORKERS FROM THE ACTIVE ONES
+										worker_struct *kill_list = NULL;
+										int kill_list_len = 0;
+
+										if (oph_get_workers_list_by_query_status(&kill_list, &kill_list_len, "up",
+												"SELECT * FROM worker WHERE id_worker IN (select id_worker from job);")) {
+											pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to retrieve active workers to kill\n");
+											snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to retrieve active workers to kill!");
+											break;
+										}
+
+										int ii;
+										for (ii=kill_list_len-1; ii>=(kill_list_len-n_workers); ii--) {
+											pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "KILLER: %s SPEGNO %s\n", killer, kill_list[ii].pid);
+
+											char *cmd = NULL;
+											if (oph_form_subm_string(command, !strcmp(killer, "kill") ? atoi(kill_list[ii].pid) : atoi(kill_list[ii].count), outfile, 0, orm, idjob, os_username, project, wid, &cmd, 4)) {
+												pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error on forming submission string\n");
+												snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to set submission string!");
+												if (cmd) {
+													free(cmd);
+													cmd = NULL;
+												}
+												break;
 											}
-											break;
-										}
-										if (!cmd) {
-											pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error on forming submission string\n");
-											snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to set submission string!");
-											break;
+											if (!cmd) {
+												pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error on forming submission string\n");
+												snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to set submission string!");
+												break;
+											}
+
+											pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Submitting command: %s\n", cmd);
+
+											success = !system(cmd);
+											if(success) {
+												snprintf(error_message, OPH_MAX_STRING_SIZE, "Worker correctly stopped");
+												pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%s\n", error_message);
+											} else {
+												snprintf(error_message, OPH_MAX_STRING_SIZE, "Error during remote submission!");
+												pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%s\n", error_message);
+											}
+
+											free(cmd);
 										}
 
-										pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Submitting command: %s\n", cmd);
-
-										success = !system(cmd);
-										if(success) {
-											snprintf(error_message, OPH_MAX_STRING_SIZE, "Worker correctly stopped");
-											pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%s\n", error_message);
-										} else {
-											snprintf(error_message, OPH_MAX_STRING_SIZE, "Error during remote submission!");
-											pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%s\n", error_message);
+										for (ii=0; ii < kill_list_len; ii++) {
+												free(kill_list[ii].id_worker);
+												free(kill_list[ii].hostname);
+												free(kill_list[ii].port);
+												free(kill_list[ii].delete_queue_name);
+												free(kill_list[ii].status);
+												free(kill_list[ii].pid);
+												free(kill_list[ii].count);
+												free(kill_list + sizeof(worker_struct)*ii);
 										}
+									} else { // THERE ARE IDLE WORKERS
+										if (n_workers <= list_len) { // UNDEPLOY n_workers WORKERS FROM THE IDLE ONES
+											int jj;
+											for (jj=list_len-1; jj >= (list_len - n_workers); jj--) {
+												char *cmd = NULL;
+												if (oph_form_subm_string(command, !strcmp(killer, "kill") ? atoi(idle_list[jj].pid) : atoi(idle_list[jj].count), outfile, 0, orm, idjob, os_username, project, wid, &cmd, 4)) {
+													pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error on forming submission string\n");
+													snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to set submission string!");
+													if (cmd) {
+														free(cmd);
+														cmd = NULL;
+													}
+													break;
+												}
+												if (!cmd) {
+													pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error on forming submission string\n");
+													snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to set submission string!");
+													break;
+												}
 
-										free(cmd);
+												pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Submitting command: %s\n", cmd);
+
+												success = !system(cmd);
+												if(success) {
+													snprintf(error_message, OPH_MAX_STRING_SIZE, "Worker correctly stopped");
+													pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%s\n", error_message);
+												} else {
+													snprintf(error_message, OPH_MAX_STRING_SIZE, "Error during remote submission!");
+													pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%s\n", error_message);
+												}
+
+												free(cmd);
+											}
+										} else { // UNDEPLOY ALL IDLE WORKERS AND THE REST FROM THE ACTIVE ONES
+											int jj;
+											for (jj=0; jj < list_len; jj++) {
+												char *cmd = NULL;
+												if (oph_form_subm_string(command, !strcmp(killer, "kill") ? atoi(idle_list[jj].pid) : atoi(idle_list[jj].count), outfile, 0, orm, idjob, os_username, project, wid, &cmd, 4)) {
+													pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error on forming submission string\n");
+													snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to set submission string!");
+													if (cmd) {
+														free(cmd);
+														cmd = NULL;
+													}
+													break;
+												}
+												if (!cmd) {
+													pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error on forming submission string\n");
+													snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to set submission string!");
+													break;
+												}
+
+												pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Submitting command: %s\n", cmd);
+
+												success = !system(cmd);
+												if(success) {
+													snprintf(error_message, OPH_MAX_STRING_SIZE, "Worker correctly stopped");
+													pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%s\n", error_message);
+												} else {
+													snprintf(error_message, OPH_MAX_STRING_SIZE, "Error during remote submission!");
+													pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%s\n", error_message);
+												}
+
+												free(cmd);
+											}
+
+											// UNDEPLOYING n_workers-list_len ACTIVE WORKERS
+											worker_struct *kill_list = NULL;
+											int kill_list_len = 0;
+
+											if (oph_get_workers_list_by_query_status(&kill_list, &kill_list_len, "up",
+													"SELECT * FROM worker WHERE id_worker IN (select id_worker from job);")) {
+												pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to retrieve active workers to kill\n");
+												snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to retrieve active workers to kill!");
+												break;
+											}
+
+											int ii;
+											for (ii=kill_list_len-1; ii>=(kill_list_len-n_workers+list_len); ii--) {
+												char *cmd = NULL;
+												if (oph_form_subm_string(command, !strcmp(killer, "kill") ? atoi(kill_list[ii].pid) : atoi(kill_list[ii].count), outfile, 0, orm, idjob, os_username, project, wid, &cmd, 4)) {
+													pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error on forming submission string\n");
+													snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to set submission string!");
+													if (cmd) {
+														free(cmd);
+														cmd = NULL;
+													}
+													break;
+												}
+												if (!cmd) {
+													pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error on forming submission string\n");
+													snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to set submission string!");
+													break;
+												}
+
+												pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Submitting command: %s\n", cmd);
+
+												success = !system(cmd);
+												if(success) {
+													snprintf(error_message, OPH_MAX_STRING_SIZE, "Worker correctly stopped");
+													pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%s\n", error_message);
+												} else {
+													snprintf(error_message, OPH_MAX_STRING_SIZE, "Error during remote submission!");
+													pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "%s\n", error_message);
+												}
+
+												free(cmd);
+											}
+
+											for (jj=0; jj < kill_list_len; jj++) {
+												free(kill_list[jj].id_worker);
+												free(kill_list[jj].hostname);
+												free(kill_list[jj].port);
+												free(kill_list[jj].delete_queue_name);
+												free(kill_list[jj].status);
+												free(kill_list[jj].pid);
+												free(kill_list[jj].count);
+												free(kill_list + sizeof(worker_struct)*jj);
+											}
+										}
 									}
 
-									free(kill_list);
+									int jj;
+									for (jj=0; jj < list_len; jj++) {
+										free(idle_list[jj].id_worker);
+										free(idle_list[jj].hostname);
+										free(idle_list[jj].port);
+										free(idle_list[jj].delete_queue_name);
+										free(idle_list[jj].status);
+										free(idle_list[jj].pid);
+										free(idle_list[jj].count);
+										free(idle_list + sizeof(worker_struct)*jj);
+									}
 								} else {
 									snprintf(error_message, OPH_MAX_STRING_SIZE, "Eccessive workers number: only %d worker can be undeployed", reserved_workers);
 									break;
