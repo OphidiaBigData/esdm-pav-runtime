@@ -5154,7 +5154,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 											break;
 										}
 										jjj++;
-										snprintf(tmp, OPH_MAX_STRING_SIZE, "worker_%s", (reserved_list + sizeof(worker_struct)*ii)->count);
+										snprintf(tmp, OPH_MAX_STRING_SIZE, "worker_%s", (reserved_list + sizeof(worker_struct)*ii)->id_worker);
 										jsonvalues[jjj] = strdup(tmp);
 										if (!jsonvalues[jjj]) {
 											pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
@@ -5165,6 +5165,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 												free(jsonvalues);
 											break;
 										}
+
 										if (oph_json_add_grid_row(oper_json, OPH_JSON_OBJKEY_CLUSTER_LIST, jsonvalues)) {
 											pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "ADD GRID ROW error\n");
 											for (iii = 0; iii < num_fields; iii++)
@@ -5194,7 +5195,6 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 									free((reserved_list + sizeof(worker_struct)*jj)->delete_queue_name);
 									free((reserved_list + sizeof(worker_struct)*jj)->status);
 									free((reserved_list + sizeof(worker_struct)*jj)->pid);
-									free((reserved_list + sizeof(worker_struct)*jj)->count);
 									free(reserved_list + sizeof(worker_struct)*jj);
 								}
 							}
@@ -5209,7 +5209,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 									break;
 								}
 
-								num_fields = 5;
+								num_fields = 6;
 
 								// Header
 								if ((success == 2) && oph_json_is_objkey_printable(objkeys, objkeys_num, OPH_JSON_OBJKEY_CLUSTER_LIST))
@@ -5278,6 +5278,17 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 											free(jsonkeys);
 										break;
 									}
+									jjj++;
+									jsonkeys[jjj] = strdup("WORKER NAME");
+									if (!jsonkeys[jjj]) {
+										pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+										for (iii = 0; iii < jjj; iii++)
+											if (jsonkeys[iii])
+												free(jsonkeys[iii]);
+										if (jsonkeys)
+											free(jsonkeys);
+										break;
+									}
 
 									jjj = 0;
 									fieldtypes = (char **) malloc(sizeof(char *) * num_fields);
@@ -5290,6 +5301,22 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 											free(jsonkeys);
 										break;
 									}
+									fieldtypes[jjj] = strdup(OPH_JSON_STRING);
+									if (!fieldtypes[jjj]) {
+										pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+										for (iii = 0; iii < num_fields; iii++)
+											if (jsonkeys[iii])
+												free(jsonkeys[iii]);
+										if (jsonkeys)
+											free(jsonkeys);
+										for (iii = 0; iii < jjj; iii++)
+											if (fieldtypes[iii])
+												free(fieldtypes[iii]);
+										if (fieldtypes)
+											free(fieldtypes);
+										break;
+									}
+									jjj++;
 									fieldtypes[jjj] = strdup(OPH_JSON_STRING);
 									if (!fieldtypes[jjj]) {
 										pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
@@ -5470,6 +5497,18 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 												free(jsonvalues);
 											break;
 										}
+										jjj++;
+										snprintf(tmp, OPH_MAX_STRING_SIZE, "worker_%s", (avail_list + sizeof(worker_struct)*ii)->id_worker);
+										jsonvalues[jjj] = strdup(tmp);
+										if (!jsonvalues[jjj]) {
+											pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+											for (iii = 0; iii < jjj; iii++)
+												if (jsonvalues[iii])
+													free(jsonvalues[iii]);
+											if (jsonvalues)
+												free(jsonvalues);
+											break;
+										}
 
 										if (oph_json_add_grid_row(oper_json, OPH_JSON_OBJKEY_CLUSTER_LIST, jsonvalues)) {
 											pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "ADD GRID ROW error\n");
@@ -5500,7 +5539,6 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 									free((avail_list + sizeof(worker_struct)*jj)->delete_queue_name);
 									free((avail_list + sizeof(worker_struct)*jj)->status);
 									free((avail_list + sizeof(worker_struct)*jj)->pid);
-									free((avail_list + sizeof(worker_struct)*jj)->count);
 									free(avail_list + sizeof(worker_struct)*jj);
 								}
 							}
@@ -5538,18 +5576,10 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 									}
 								}
 
-								int max_count = 0;
-
-								if (oph_get_max_count(&max_count)) {
-									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to retrieve count values!\n");
-									snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to retrieve count values!");
-									break;
-								}
-
 								int ii;
 								for (ii=1; ii<=n_workers; ii++) {
 									char *cmd = NULL;
-									if (oph_form_subm_string(command, max_count + ii, outfile, 0, orm, idjob, os_username, project, wid, &cmd, 3)) {
+									if (oph_form_subm_string(command, 0, outfile, 0, orm, idjob, os_username, project, wid, &cmd, 3)) {
 										pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error on forming submission string\n");
 										snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to set submission string!");
 										if (cmd) {
@@ -5646,7 +5676,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 											pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "KILLER: %s SPEGNO %s\n", killer, kill_list[ii].pid);
 
 											char *cmd = NULL;
-											if (oph_form_subm_string(command, !strcmp(killer, "kill") ? atoi(kill_list[ii].pid) : atoi(kill_list[ii].count), outfile, 0, orm, idjob, os_username, project, wid, &cmd, 4)) {
+											if (oph_form_subm_string(command, !strcmp(killer, "kill") ? atoi(kill_list[ii].pid) : atoi(kill_list[ii].id_worker), outfile, 0, orm, idjob, os_username, project, wid, &cmd, 4)) {
 												pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error on forming submission string\n");
 												snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to set submission string!");
 												if (cmd) {
@@ -5682,7 +5712,6 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 												free(kill_list[ii].delete_queue_name);
 												free(kill_list[ii].status);
 												free(kill_list[ii].pid);
-												free(kill_list[ii].count);
 												free(kill_list + sizeof(worker_struct)*ii);
 										}
 									} else { // THERE ARE IDLE WORKERS
@@ -5690,7 +5719,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 											int jj;
 											for (jj=list_len-1; jj >= (list_len - n_workers); jj--) {
 												char *cmd = NULL;
-												if (oph_form_subm_string(command, !strcmp(killer, "kill") ? atoi(idle_list[jj].pid) : atoi(idle_list[jj].count), outfile, 0, orm, idjob, os_username, project, wid, &cmd, 4)) {
+												if (oph_form_subm_string(command, !strcmp(killer, "kill") ? atoi(idle_list[jj].pid) : atoi(idle_list[jj].id_worker), outfile, 0, orm, idjob, os_username, project, wid, &cmd, 4)) {
 													pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error on forming submission string\n");
 													snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to set submission string!");
 													if (cmd) {
@@ -5722,7 +5751,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 											int jj;
 											for (jj=0; jj < list_len; jj++) {
 												char *cmd = NULL;
-												if (oph_form_subm_string(command, !strcmp(killer, "kill") ? atoi(idle_list[jj].pid) : atoi(idle_list[jj].count), outfile, 0, orm, idjob, os_username, project, wid, &cmd, 4)) {
+												if (oph_form_subm_string(command, !strcmp(killer, "kill") ? atoi(idle_list[jj].pid) : atoi(idle_list[jj].id_worker), outfile, 0, orm, idjob, os_username, project, wid, &cmd, 4)) {
 													pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error on forming submission string\n");
 													snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to set submission string!");
 													if (cmd) {
@@ -5765,7 +5794,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 											int ii;
 											for (ii=kill_list_len-1; ii>=(kill_list_len-n_workers+list_len); ii--) {
 												char *cmd = NULL;
-												if (oph_form_subm_string(command, !strcmp(killer, "kill") ? atoi(kill_list[ii].pid) : atoi(kill_list[ii].count), outfile, 0, orm, idjob, os_username, project, wid, &cmd, 4)) {
+												if (oph_form_subm_string(command, !strcmp(killer, "kill") ? atoi(kill_list[ii].pid) : atoi(kill_list[ii].id_worker), outfile, 0, orm, idjob, os_username, project, wid, &cmd, 4)) {
 													pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error on forming submission string\n");
 													snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to set submission string!");
 													if (cmd) {
@@ -5801,7 +5830,6 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 												free(kill_list[jj].delete_queue_name);
 												free(kill_list[jj].status);
 												free(kill_list[jj].pid);
-												free(kill_list[jj].count);
 												free(kill_list + sizeof(worker_struct)*jj);
 											}
 										}
@@ -5815,7 +5843,6 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 										free(idle_list[jj].delete_queue_name);
 										free(idle_list[jj].status);
 										free(idle_list[jj].pid);
-										free(idle_list[jj].count);
 										free(idle_list + sizeof(worker_struct)*jj);
 									}
 								} else {

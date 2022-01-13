@@ -600,7 +600,7 @@ int oph_form_subm_string(const char *request, const int ncores, char *outfile, s
 				return RMANAGER_MEMORY_ERROR;
 			}
 
-			sprintf(*cmd, "%s %d", command, ncores);
+			sprintf(*cmd, "%s %d", command);
 			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Submission string:\n%s\n", *cmd);
 
 			return RMANAGER_SUCCESS;
@@ -1026,30 +1026,6 @@ int oph_get_workers_number_by_status(int *workers_number, char *status) {
 	return RMANAGER_SUCCESS;
 }
 
-int oph_get_max_count(int *count) {
-	if (!count)
-		return RMANAGER_NULL_PARAM;
-
-	sqlite3 *db = NULL;
-	char *err_msg = 0;
-
-	while (sqlite3_open_v2(db_location, &db, SQLITE_OPEN_READWRITE, NULL) != SQLITE_OK)
-		pmesg(LOG_ERROR, __FILE__, __LINE__, "Cannot open database. Database %s is locked or does not exist\n", db_location);
-
-	int neededSize = snprintf(NULL, 0, "SELECT MAX(count) FROM worker;");
-	char *get_max_count = (char *) malloc(neededSize + 1);
-	snprintf(get_max_count, neededSize + 1, "SELECT MAX(count) FROM worker;");
-
-	while (sqlite3_exec(db, get_max_count, get_single_param_callback, count, &err_msg) != SQLITE_OK)
-		pmesg(LOG_ERROR, __FILE__, __LINE__, "SQL error on select query: %s\n", err_msg);
-	free(get_max_count);
-
-	sqlite3_free(err_msg);
-	sqlite3_close(db);
-
-	return RMANAGER_SUCCESS;
-}
-
 int get_kill_list_callback(void *array, int argc, char **argv, char **azColName)
 {
 	UNUSED(azColName);
@@ -1083,9 +1059,9 @@ int get_reserved_workers_tokill(int *out_list, int workers_number, char *killer)
 			pmesg(LOG_ERROR, __FILE__, __LINE__, "SQL error on select query: %s\n", err_msg);
 		free(get_pidlist_info);
 	} else if(!strcmp(killer, "bkill")) { // EXTERN KILLER
-		int neededSize = snprintf(NULL, 0, "SELECT count FROM worker WHERE count != 0 ORDER BY count DESC LIMIT %d;", workers_number);
+		int neededSize = snprintf(NULL, 0, "SELECT id_worker FROM worker ORDER BY id_worker DESC LIMIT %d;", workers_number);
 		char *get_countlist_info = (char *) malloc(neededSize + 1);
-		snprintf(get_countlist_info, neededSize + 1, "SELECT count FROM worker WHERE count != 0 ORDER BY count DESC LIMIT %d;", workers_number);
+		snprintf(get_countlist_info, neededSize + 1, "SELECT id_worker FROM worker ORDER BY id_worker DESC LIMIT %d;", workers_number);
 
 		while (sqlite3_exec(db, get_countlist_info, get_kill_list_callback, out_list, &err_msg) != SQLITE_OK)
 			pmesg(LOG_ERROR, __FILE__, __LINE__, "SQL error on select query: %s\n", err_msg);
@@ -1110,7 +1086,7 @@ int get_workers_list_by_query_callback(void *array, int argc, char **argv, char 
 
 	worker_struct *list = (worker_struct *) array;
 
-	if (!argv[0] || !argv[1] || !argv[2] || !argv[3] || !argv[4] || !argv[5] || !argv[6])
+	if (!argv[0] || !argv[1] || !argv[2] || !argv[3] || !argv[4] || !argv[5])
 		return 1;
 	else {
 		int neededSize = snprintf(NULL, 0, "%s", argv[0]);
@@ -1136,10 +1112,6 @@ int get_workers_list_by_query_callback(void *array, int argc, char **argv, char 
 		neededSize = snprintf(NULL, 0, "%s", argv[5]);
 		(list + sizeof(worker_struct)*out_list_len)->pid = (char *) malloc(neededSize + 1);
 		snprintf((list + sizeof(worker_struct)*out_list_len)->pid, neededSize + 1, "%s", argv[5]);
-
-		neededSize = snprintf(NULL, 0, "%s", argv[6]);
-		(list + sizeof(worker_struct)*out_list_len)->count = (char *) malloc(neededSize + 1);
-		snprintf((list + sizeof(worker_struct)*out_list_len)->count, neededSize + 1, "%s", argv[6]);
 
 		out_list_len ++;
 	}
