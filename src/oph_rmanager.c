@@ -600,7 +600,7 @@ int oph_form_subm_string(const char *request, const int ncores, char *outfile, s
 				return RMANAGER_MEMORY_ERROR;
 			}
 
-			sprintf(*cmd, "%s %d", command);
+			sprintf(*cmd, "%s", command);
 			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Submission string:\n%s\n", *cmd);
 
 			return RMANAGER_SUCCESS;
