@@ -49,7 +49,6 @@
 #define SUBM_PREFIX						"SUBM_PREFIX"
 #define SUBM_POSTFIX					"SUBM_POSTFIX"
 #define SUBM_CMD_TO_DEPLOY_WORKERS      "SUBM_CMD_TO_DEPLOY_WORKERS"
-#define SUBM_CMD_TO_UNDEPLOY_WORKERS   	"SUBM_CMD_TO_UNDEPLOY_WORKERS"
 
 #define OPH_RMANAGER_SUDO			"sudo -u %s"
 #define OPH_RMANAGER_DEFAULT_QUEUE	"ophidia"
@@ -70,8 +69,14 @@ extern char *oph_subm_user;
 extern oph_service_info *service_info;
 
 #ifdef MULTI_NODE_SUPPORT
+#include "oph_ssh_submit.h"
+#include "rabbitmq_utils.h"
+
 extern char *db_location;
 extern char *killer;
+extern char *rabbitmq_username;
+extern char *rabbitmq_password;
+
 int list_index = 0;
 int out_list_len = 0;
 #endif
@@ -300,8 +305,6 @@ int oph_read_rmanager_conf(oph_rmanager * orm)
 				orm->subm_postfix = target;
 			else if (!strcmp(buffer, SUBM_CMD_TO_DEPLOY_WORKERS))
 				orm->subm_cmd_deploy_workers = target;
-			else if (!strcmp(buffer, SUBM_CMD_TO_UNDEPLOY_WORKERS))
-				orm->subm_cmd_undeploy_workers = target;
 			else {
 				pmesg(LOG_WARNING, __FILE__, __LINE__, "Parameter '%s' will be negleted\n", buffer);
 				free(target);
@@ -601,23 +604,6 @@ int oph_form_subm_string(const char *request, const int ncores, char *outfile, s
 			}
 
 			sprintf(*cmd, "%s", command);
-			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Submission string:\n%s\n", *cmd);
-
-			return RMANAGER_SUCCESS;
-		} case 4: {
-			if (!orm->subm_cmd_undeploy_workers) {
-				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Parameter '%s' is not set\n", SUBM_CMD_TO_UNDEPLOY_WORKERS);
-				return RMANAGER_ERROR;
-			}
-			command = orm->subm_cmd_undeploy_workers;
-
-			int len = OPH_MAX_STRING_SIZE + strlen(request);
-			if (!(*cmd = (char *) malloc(len * sizeof(char)))) {
-				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
-				return RMANAGER_MEMORY_ERROR;
-			}
-
-			sprintf(*cmd, "%s %s %d", command, killer, ncores);
 			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Submission string:\n%s\n", *cmd);
 
 			return RMANAGER_SUCCESS;
@@ -1149,6 +1135,140 @@ int oph_get_workers_list_by_query_status (worker_struct **out_list, int *len, ch
 	*len = out_list_len;
 
 	return RMANAGER_SUCCESS;
+}
+
+int oph_undeploy_worker (worker_struct worker) {
+	if (!worker.hostname || !worker.port || !worker.delete_queue_name)
+		return RMANAGER_ERROR;
+
+	amqp_connection_state_t conn;
+	amqp_channel_t channel = 1;
+
+	rabbitmq_publish_connection(&conn, channel, worker.hostname, worker.port, rabbitmq_username, rabbitmq_password, worker.delete_queue_name);
+
+	amqp_basic_properties_t props;
+	props._flags = AMQP_BASIC_CONTENT_TYPE_FLAG | AMQP_BASIC_DELIVERY_MODE_FLAG;
+	props.content_type = amqp_cstring_bytes("text/plain");
+	props.delivery_mode = AMQP_DELIVERY_PERSISTENT;
+
+	int status = amqp_basic_publish(conn,
+					channel,
+					amqp_cstring_bytes(""),
+					amqp_cstring_bytes(worker.delete_queue_name),
+					0,	// mandatory (message must be routed to a queue)
+					0,	// immediate (message must be delivered to a consumer immediately)
+					&props,	// properties
+					amqp_cstring_bytes(WORKER_SHUTDOWN_MESSAGE));
+
+	if (status == AMQP_STATUS_OK)
+		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Message %s has been sent to %s on ip_address %s and port %s\n", WORKER_SHUTDOWN_MESSAGE, worker.delete_queue_name, worker.hostname, worker.port);
+	else {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "Cannot send message to %s on ip_address %s and port %s\n", worker.delete_queue_name, worker.hostname, worker.port);
+
+		return RMANAGER_ERROR;
+	}
+
+	close_rabbitmq_connection(conn, channel);
+
+	return RMANAGER_SUCCESS;
+}
+
+int oph_undeploy_workers (int w_number) {
+	worker_struct *idle_list = NULL;
+	int list_len = 0;
+	if (oph_get_workers_list_by_query_status(&idle_list, &list_len, "up",
+			"SELECT * FROM worker WHERE id_worker NOT IN (select id_worker from job);")) {
+		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to retrieve number of idle workers!\n");
+		return RMANAGER_ERROR;
+	}
+
+	if (list_len == 0) { // NO IDLE WORKERS. UNDEPLOY WORKERS FROM THE ACTIVE ONES
+		worker_struct *kill_list = NULL;
+		int kill_list_len = 0;
+
+		if (oph_get_workers_list_by_query_status(&kill_list, &kill_list_len, "up",
+				"SELECT * FROM worker WHERE id_worker IN (select id_worker from job);")) {
+			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to retrieve active workers to kill\n");
+			return RMANAGER_ERROR;
+		}
+
+		int ii;
+		for (ii=kill_list_len-1; ii>=(kill_list_len-w_number); ii--) {
+			if(oph_undeploy_worker(kill_list[ii])){
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to undeploy active workers\n");
+				return RMANAGER_ERROR;
+			}
+		}
+
+		for (ii=0; ii < kill_list_len; ii++) {
+			free(kill_list[ii].id_worker);
+			free(kill_list[ii].hostname);
+			free(kill_list[ii].port);
+			free(kill_list[ii].delete_queue_name);
+			free(kill_list[ii].status);
+			free(kill_list[ii].pid);
+			free(kill_list + sizeof(worker_struct)*ii);
+		}
+	} else { // THERE ARE IDLE WORKERS
+		if (w_number <= list_len) { // UNDEPLOY n_workers WORKERS FROM THE IDLE ONES
+			int ii;
+			for (ii=list_len-1; ii >= (list_len - w_number); ii--) {
+				if(oph_undeploy_worker(idle_list[ii])){
+					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to undeploy idle workers\n");
+					return RMANAGER_ERROR;
+				}
+			}
+		} else { // UNDEPLOY ALL IDLE WORKERS AND THE REST FROM THE ACTIVE ONES
+			int ii;
+			for (ii=0; ii < list_len; ii++) {
+				if(oph_undeploy_worker(idle_list[ii])){
+					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to undeploy workers\n");
+					return RMANAGER_ERROR;
+				}
+			}
+
+			// UNDEPLOYING w_number-list_len ACTIVE WORKERS
+			worker_struct *kill_list = NULL;
+			int kill_list_len = 0;
+
+			if (oph_get_workers_list_by_query_status(&kill_list, &kill_list_len, "up",
+					"SELECT * FROM worker WHERE id_worker IN (select id_worker from job);")) {
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to retrieve number of active workers!\n");
+				return RMANAGER_ERROR;
+			}
+
+			for (ii=kill_list_len-1; ii>=(kill_list_len-w_number+list_len); ii--) {
+				if(oph_undeploy_worker(kill_list[ii])){
+					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to undeploy workers\n");
+					return RMANAGER_ERROR;
+				}
+			}
+
+			for (ii=0; ii < kill_list_len; ii++) {
+				free(kill_list[ii].id_worker);
+				free(kill_list[ii].hostname);
+				free(kill_list[ii].port);
+				free(kill_list[ii].delete_queue_name);
+				free(kill_list[ii].status);
+				free(kill_list[ii].pid);
+				free(kill_list + sizeof(worker_struct)*ii);
+			}
+		}
+	}
+
+	int ii;
+	for (ii=0; ii < list_len; ii++) {
+		free(idle_list[ii].id_worker);
+		free(idle_list[ii].hostname);
+		free(idle_list[ii].port);
+		free(idle_list[ii].delete_queue_name);
+		free(idle_list[ii].status);
+		free(idle_list[ii].pid);
+		free(idle_list + sizeof(worker_struct)*ii);
+	}
+
+	return RMANAGER_SUCCESS;
+
 }
 #endif
 

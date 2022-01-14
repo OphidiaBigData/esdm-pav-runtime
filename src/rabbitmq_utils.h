@@ -23,6 +23,7 @@
 #define RABBITMQ_FAILURE -1
 #define RABBITMQ_SUCCESS 1
 
+#define WORKER_SHUTDOWN_MESSAGE "0***0"
 
 /**
  * \brief			            Function to prepare RabbitMQ connection to consume messages

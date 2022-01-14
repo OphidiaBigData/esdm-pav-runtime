@@ -3,4 +3,3 @@ SUBM_MULTIUSER=no
 SUBM_PREFIX=
 SUBM_POSTFIX=>/dev/null 2>&1 </dev/null
 SUBM_CMD_TO_DEPLOY_WORKERS=@OPH_SERVER_LOCATION@/etc/script/deploy_pav_worker.sh
-SUBM_CMD_TO_UNDEPLOY_WORKERS=@OPH_SERVER_LOCATION@/etc/script/undeploy_pav_worker.sh
