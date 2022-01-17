@@ -46,7 +46,6 @@ extern ophidiadb *ophDB;
 
 #ifdef MULTI_NODE_SUPPORT
 extern char *max_workers;
-extern char *killer;
 #endif
 
 extern int oph_finalize_known_operator(int idjob, oph_json * oper_json, const char *operator_name, char *error_message, int success, char **response, ophidiadb * oDB,

@@ -97,7 +97,6 @@ int oph_is_detached_task(int id);
 int oph_remove_detached_task(int id);
 
 int oph_get_workers_number_by_status(int *workers_number, char *status);
-int get_reserved_workers_tokill(int *out_list, int workers_number, char *killer);
 int oph_get_workers_list_by_query_status (worker_struct **out_list, int *len, char *status, char *query);
 int oph_undeploy_workers (int w_number);
 

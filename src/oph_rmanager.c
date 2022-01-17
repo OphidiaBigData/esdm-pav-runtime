@@ -73,7 +73,6 @@ extern oph_service_info *service_info;
 #include "rabbitmq_utils.h"
 
 extern char *db_location;
-extern char *killer;
 extern char *rabbitmq_username;
 extern char *rabbitmq_password;
 
@@ -1024,45 +1023,6 @@ int get_kill_list_callback(void *array, int argc, char **argv, char **azColName)
 	}
 
 	return 0;
-}
-
-int get_reserved_workers_tokill(int *out_list, int workers_number, char *killer) {
-	if (!out_list || !killer)
-		return RMANAGER_NULL_PARAM;
-
-	sqlite3 *db = NULL;
-	char *err_msg = 0;
-
-	while (sqlite3_open_v2(db_location, &db, SQLITE_OPEN_READWRITE, NULL) != SQLITE_OK)
-		pmesg(LOG_ERROR, __FILE__, __LINE__, "Cannot open database. Database %s is locked or does not exist\n", db_location);
-
-	if(!strcmp(killer, "kill")) { // LOCAL KILLER
-		int neededSize = snprintf(NULL, 0, "SELECT pid FROM worker WHERE pid != 0 ORDER BY pid DESC LIMIT %d;", workers_number);
-		char *get_pidlist_info = (char *) malloc(neededSize + 1);
-		snprintf(get_pidlist_info, neededSize + 1, "SELECT pid FROM worker WHERE pid != 0 ORDER BY pid DESC LIMIT %d;", workers_number);
-
-		while (sqlite3_exec(db, get_pidlist_info, get_kill_list_callback, out_list, &err_msg) != SQLITE_OK)
-			pmesg(LOG_ERROR, __FILE__, __LINE__, "SQL error on select query: %s\n", err_msg);
-		free(get_pidlist_info);
-	} else if(!strcmp(killer, "bkill")) { // EXTERN KILLER
-		int neededSize = snprintf(NULL, 0, "SELECT id_worker FROM worker ORDER BY id_worker DESC LIMIT %d;", workers_number);
-		char *get_countlist_info = (char *) malloc(neededSize + 1);
-		snprintf(get_countlist_info, neededSize + 1, "SELECT id_worker FROM worker ORDER BY id_worker DESC LIMIT %d;", workers_number);
-
-		while (sqlite3_exec(db, get_countlist_info, get_kill_list_callback, out_list, &err_msg) != SQLITE_OK)
-			pmesg(LOG_ERROR, __FILE__, __LINE__, "SQL error on select query: %s\n", err_msg);
-		free(get_countlist_info);
-	} else {
-		pmesg(LOG_ERROR, __FILE__, __LINE__, "Killer %s is not supported\n", killer);
-		return RMANAGER_NULL_PARAM;
-	}
-
-	sqlite3_free(err_msg);
-	sqlite3_close(db);
-
-	list_index = 0;
-
-	return RMANAGER_SUCCESS;
 }
 
 int get_workers_list_by_query_callback(void *array, int argc, char **argv, char **azColName)

@@ -20,9 +20,9 @@
 
 if [ "@MULTI_NODE_SUPPORT@" = "yes" ];
 then
-    usage() { echo "Usage: $0 [-r <RabbitMQ server path - mandatory>] [-u <RabbitMQ username (default=esdmpav)>] [-p <RabbitMQ password (default=esdmpav)>] [-k <Worker killer (default=kill)>] [-n <Worker thread number (default=10)>] [-w <Max worker number (default=10)>] [-c <CDO bin directory (default=)>]" 1>&2; exit 1; }
+    usage() { echo "Usage: $0 [-r <RabbitMQ server path - mandatory>] [-u <RabbitMQ username (default=esdmpav)>] [-p <RabbitMQ password (default=esdmpav)>] [-n <Worker thread number (default=10)>] [-w <Max worker number (default=10)>] [-c <CDO bin directory (default=)>]" 1>&2; exit 1; }
 
-    while getopts ":r:u:p:k:n:w:c:" o; do
+    while getopts ":r:u:p:n:w:c:" o; do
         case "${o}" in
             r)
                 RABBITMQ_SERVER_PATH=${OPTARG}
@@ -32,9 +32,6 @@ then
                 ;;
             p)
                 pswd=${OPTARG}
-                ;;
-            k)
-                killer=${OPTARG}
                 ;;
             n)
                 w_thread_number=${OPTARG}
@@ -69,12 +66,6 @@ then
     else
         RABBITMQ_PASSWORD=${pswd}
     fi
-    if [ -z "$killer" ]
-    then
-        KILLER=kill
-    else
-        KILLER=${killer}
-    fi
     if [ -z "$w_thread_number" ]
     then
         WORKER_THREAD_NUMBER=10
@@ -99,7 +90,6 @@ then
     sed -i -e "s@RABBITMQ_SERVER_PATH=.*@RABBITMQ_SERVER_PATH=${RABBITMQ_SERVER_PATH}@g" @OPH_SERVER_LOCATION@/sbin/run_esdm_pav.sh
     sed -i -e "s@RABBITMQ_USERNAME=.*@RABBITMQ_USERNAME=${RABBITMQ_USERNAME}@g" @OPH_SERVER_LOCATION@/etc/scheduler.conf
     sed -i -e "s@RABBITMQ_PASSWORD=.*@RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD}@g" @OPH_SERVER_LOCATION@/etc/scheduler.conf
-    sed -i -e "s@KILLER=.*@KILLER=${KILLER}@g" @OPH_SERVER_LOCATION@/etc/scheduler.conf
     sed -i -e "s@WORKER_THREAD_NUMBER=.*@WORKER_THREAD_NUMBER=${WORKER_THREAD_NUMBER}@g" @OPH_SERVER_LOCATION@/etc/scheduler.conf
     sed -i -e "s@MAX_WORKERS=.*@MAX_WORKERS=${MAX_WORKERS}@g" @OPH_SERVER_LOCATION@/etc/scheduler.conf
     if grep -q "CDO_PATH" @OPH_SERVER_LOCATION@/etc/oph_configuration;
@@ -112,7 +102,7 @@ then
     echo -e "default_vhost = /\ndefault_user = $RABBITMQ_USERNAME\ndefault_pass = $RABBITMQ_PASSWORD\ndefault_user_tags.administrator = true\ndefault_permissions.configure = .\ndefault_permissions.read = .\ndefault_permissions.write = .*" > ${RABBITMQ_SERVER_PATH}/etc/rabbitmq/rabbitmq.conf
 
     echo -e "\nRabbitMQ credential have been generated in $RABBITMQ_SERVER_PATH/etc/rabbitmq/rabbitmq.conf"
-    echo -e "\nSet\n\tRABBITMQ_SERVER_PATH=$RABBITMQ_SERVER_PATH\n\tRABBITMQ_USERNAME=$RABBITMQ_USERNAME\n\tRABBITMQ_PASSWORD=$RABBITMQ_PASSWORD\n\tKILLER=$KILLER\n\tWORKER_THREAD_NUMBER=$WORKER_THREAD_NUMBER\n\tMAX_WORKERS=$MAX_WORKERS\n\tCDO_PATH=$CDO_PATH\n"
+    echo -e "\nSet\n\tRABBITMQ_SERVER_PATH=$RABBITMQ_SERVER_PATH\n\tRABBITMQ_USERNAME=$RABBITMQ_USERNAME\n\tRABBITMQ_PASSWORD=$RABBITMQ_PASSWORD\n\tWORKER_THREAD_NUMBER=$WORKER_THREAD_NUMBER\n\tMAX_WORKERS=$MAX_WORKERS\n\tCDO_PATH=$CDO_PATH\n"
 fi
 
 openssl req -newkey rsa:1024 \
