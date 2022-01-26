@@ -48,7 +48,9 @@
 #define SUBM_QUEUE_LOW					"SUBM_QUEUE_LOW"
 #define SUBM_PREFIX						"SUBM_PREFIX"
 #define SUBM_POSTFIX					"SUBM_POSTFIX"
-#define SUBM_CMD_TO_DEPLOY_WORKERS      "SUBM_CMD_TO_DEPLOY_WORKERS"
+#define SUBM_CMD_TO_DEPLOY_WORKERS_LOCAL_SCHEDULER      "SUBM_CMD_TO_DEPLOY_WORKERS_LOCAL_SCHEDULER"
+#define SUBM_CMD_TO_DEPLOY_WORKERS_LSF_SCHEDULER      	"SUBM_CMD_TO_DEPLOY_WORKERS_LSF_SCHEDULER"
+#define SUBM_CMD_TO_DEPLOY_WORKERS_SLURM_SCHEDULER      "SUBM_CMD_TO_DEPLOY_WORKERS_SLURM_SCHEDULER"
 
 #define OPH_RMANAGER_SUDO			"sudo -u %s"
 #define OPH_RMANAGER_DEFAULT_QUEUE	"ophidia"
@@ -75,6 +77,7 @@ extern oph_service_info *service_info;
 extern char *db_location;
 extern char *rabbitmq_username;
 extern char *rabbitmq_password;
+extern char *scheduler;
 
 int list_index = 0;
 int out_list_len = 0;
@@ -302,8 +305,12 @@ int oph_read_rmanager_conf(oph_rmanager * orm)
 				orm->subm_prefix = target;
 			else if (!strcmp(buffer, SUBM_POSTFIX))
 				orm->subm_postfix = target;
-			else if (!strcmp(buffer, SUBM_CMD_TO_DEPLOY_WORKERS))
-				orm->subm_cmd_deploy_workers = target;
+			else if (!strcmp(buffer, SUBM_CMD_TO_DEPLOY_WORKERS_LOCAL_SCHEDULER))
+				orm->subm_cmd_deploy_workers_local_scheduler = target;
+			else if (!strcmp(buffer, SUBM_CMD_TO_DEPLOY_WORKERS_LSF_SCHEDULER))
+				orm->subm_cmd_deploy_workers_lsf_scheduler = target;
+			else if (!strcmp(buffer, SUBM_CMD_TO_DEPLOY_WORKERS_SLURM_SCHEDULER))
+				orm->subm_cmd_deploy_workers_slurm_scheduler = target;
 			else {
 				pmesg(LOG_WARNING, __FILE__, __LINE__, "Parameter '%s' will be negleted\n", buffer);
 				free(target);
@@ -367,8 +374,9 @@ int initialize_rmanager(oph_rmanager * orm)
 	orm->subm_queue_low = NULL;
 	orm->subm_prefix = NULL;
 	orm->subm_postfix = NULL;
-	orm->subm_cmd_deploy_workers = NULL;
-	orm->subm_cmd_undeploy_workers = NULL;
+	orm->subm_cmd_deploy_workers_local_scheduler = NULL;
+	orm->subm_cmd_deploy_workers_lsf_scheduler = NULL;
+	orm->subm_cmd_deploy_workers_slurm_scheduler = NULL;
 	orm->subm_taskid = 0;	// Used only for internal requests
 	orm->subm_detached_tasks = NULL;
 
@@ -590,11 +598,28 @@ int oph_form_subm_string(const char *request, const int ncores, char *outfile, s
 			break;
 #ifdef MULTI_NODE_SUPPORT
 		case 3:{
-			if (!orm->subm_cmd_deploy_workers) {
-				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Parameter '%s' is not set\n", SUBM_CMD_TO_DEPLOY_WORKERS);
+			if (!strcmp(scheduler, LOCAL_SCHEDULER)) {
+				if (!orm->subm_cmd_deploy_workers_local_scheduler) {
+					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Parameter '%s' is not set\n", SUBM_CMD_TO_DEPLOY_WORKERS_LOCAL_SCHEDULER);
+					return RMANAGER_ERROR;
+				}
+				command = orm->subm_cmd_deploy_workers_local_scheduler;
+			} else if (!strcmp(scheduler, LSF_SCHEDULER)) {
+				if (!orm->subm_cmd_deploy_workers_lsf_scheduler) {
+					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Parameter '%s' is not set\n", SUBM_CMD_TO_DEPLOY_WORKERS_LSF_SCHEDULER);
+					return RMANAGER_ERROR;
+				}
+				command = orm->subm_cmd_deploy_workers_lsf_scheduler;
+			} else if (!strcmp(scheduler, SLURM_SCHEDULER)) {
+				if (!orm->subm_cmd_deploy_workers_slurm_scheduler) {
+					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Parameter '%s' is not set\n", SUBM_CMD_TO_DEPLOY_WORKERS_SLURM_SCHEDULER);
+					return RMANAGER_ERROR;
+				}
+				command = orm->subm_cmd_deploy_workers_slurm_scheduler;
+			} else {
+				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Scheduler \"%s\" is not supported\n", scheduler);
 				return RMANAGER_ERROR;
 			}
-			command = orm->subm_cmd_deploy_workers;
 
 			int len = OPH_MAX_STRING_SIZE + strlen(request);
 			if (!(*cmd = (char *) malloc(len * sizeof(char)))) {
@@ -712,14 +737,19 @@ int free_oph_rmanager(oph_rmanager * orm)
 		free(orm->subm_postfix);
 		orm->subm_postfix = NULL;
 	}
-	if (orm->subm_cmd_deploy_workers) {
-		free(orm->subm_cmd_deploy_workers);
-		orm->subm_cmd_deploy_workers = NULL;
+	if (orm->subm_cmd_deploy_workers_local_scheduler) {
+		free(orm->subm_cmd_deploy_workers_local_scheduler);
+		orm->subm_cmd_deploy_workers_local_scheduler = NULL;
 	}
-	if (orm->subm_cmd_undeploy_workers) {
-		free(orm->subm_cmd_undeploy_workers);
-		orm->subm_cmd_undeploy_workers = NULL;
+	if (orm->subm_cmd_deploy_workers_lsf_scheduler) {
+		free(orm->subm_cmd_deploy_workers_lsf_scheduler);
+		orm->subm_cmd_deploy_workers_lsf_scheduler = NULL;
 	}
+	if (orm->subm_cmd_deploy_workers_slurm_scheduler) {
+		free(orm->subm_cmd_deploy_workers_slurm_scheduler);
+		orm->subm_cmd_deploy_workers_slurm_scheduler = NULL;
+	}
+
 	oph_detached_task *tmp;
 	while (orm->subm_detached_tasks) {
 		tmp = orm->subm_detached_tasks->next;
@@ -980,14 +1010,12 @@ int get_single_param_callback(void *number, int argc, char **argv, char **azColN
 
 	if(argv[0])
 		*result = atoi(argv[0]);
-	else
-		*result = 0;
 
 	return 0;
 }
 
 int oph_get_workers_number_by_status(int *workers_number, char *status) {
-	if (!workers_number)
+	if (!workers_number || !status)
 		return RMANAGER_NULL_PARAM;
 	*workers_number = 0;
 
@@ -1120,6 +1148,8 @@ int oph_undeploy_worker (worker_struct worker) {
 					&props,	// properties
 					amqp_cstring_bytes(WORKER_SHUTDOWN_MESSAGE));
 
+	close_rabbitmq_connection(conn, channel);
+
 	if (status == AMQP_STATUS_OK)
 		pmesg(LOG_DEBUG, __FILE__, __LINE__, "Message %s has been sent to %s on ip_address %s and port %s\n", WORKER_SHUTDOWN_MESSAGE, worker.delete_queue_name, worker.hostname, worker.port);
 	else {
@@ -1127,8 +1157,6 @@ int oph_undeploy_worker (worker_struct worker) {
 
 		return RMANAGER_ERROR;
 	}
-
-	close_rabbitmq_connection(conn, channel);
 
 	return RMANAGER_SUCCESS;
 }

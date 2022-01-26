@@ -43,6 +43,11 @@ typedef struct _worker_struct {
 	char *status;
 	char *pid;
 } worker_struct;
+
+#define LOCAL_SCHEDULER                                 "local"
+#define LSF_SCHEDULER                                   "lsf"
+#define SLURM_SCHEDULER                                 "slurm"
+
 #endif
 
 typedef struct _oph_detached_task {
@@ -67,8 +72,9 @@ struct _oph_rmanager {
 	char *subm_queue_low;
 	char *subm_prefix;
 	char *subm_postfix;
-	char *subm_cmd_deploy_workers;
-	char *subm_cmd_undeploy_workers;
+	char *subm_cmd_deploy_workers_local_scheduler;
+	char *subm_cmd_deploy_workers_lsf_scheduler;
+	char *subm_cmd_deploy_workers_slurm_scheduler;
 	int subm_taskid;
 	oph_detached_task *subm_detached_tasks;
 };

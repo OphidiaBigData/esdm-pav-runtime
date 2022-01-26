@@ -45,9 +45,12 @@ src/oph_server
 src/oph_client
 src/oph_manage_user
 src/esdm_pav_runtime
-etc/script/deploy_pav_worker.sh
+etc/script/deploy_pav_worker_LOCAL.sh
+etc/script/deploy_pav_worker_LSF.sh
+etc/script/deploy_pav_worker_SLURM.sh
 etc/esdm_pav_config.sh
 etc/run_esdm_pav.sh
+etc/rmanager.conf
 test/oph_server_test
 test/esdm_pav_runtime_test
 *-coverage

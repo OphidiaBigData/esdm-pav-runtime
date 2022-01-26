@@ -62,6 +62,7 @@ char *rabbitmq_password = NULL;
 char *rabbitmq_task_queue_name = NULL;
 char *max_workers = NULL;
 char *db_location = NULL;
+char *scheduler = NULL;
 char *wid_tocancel = NULL;
 
 extern HASHTBL *oph_rabbit_hashtbl;
@@ -153,6 +154,15 @@ int oph_rabbitmq_open_connection()
 		}
 	}
 	pmesg_safe(&rabbitmq_flag, LOG_INFO, __FILE__, __LINE__, "LOADED PARAM DB_LOCATION: %s\n", db_location);
+
+	if (!scheduler) {
+		if (oph_server_conf_get_param(oph_rabbit_hashtbl, "SCHEDULER", &scheduler)) {
+			pmesg_safe(&rabbitmq_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to get SCHEDULER param\n");
+			oph_server_conf_unload(&oph_rabbit_hashtbl);
+			return 1;
+		}
+	}
+	pmesg_safe(&rabbitmq_flag, LOG_INFO, __FILE__, __LINE__, "LOADED PARAM SCHEDULER: %s\n", scheduler);
 
 	props._flags = AMQP_BASIC_CONTENT_TYPE_FLAG | AMQP_BASIC_DELIVERY_MODE_FLAG;
 	props.content_type = amqp_cstring_bytes("text/plain");
