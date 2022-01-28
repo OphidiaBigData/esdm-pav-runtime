@@ -1039,6 +1039,18 @@ int oph_get_workers_number_by_status(int *workers_number, char *status) {
 	return RMANAGER_SUCCESS;
 }
 
+int get_count_callback(void *number, int argc, char **argv, char **azColName)
+{
+	UNUSED(azColName);
+
+	int *result = (int *) number;
+
+	if(argv[0])
+		*result += 1;
+
+	return 0;
+}
+
 int get_workers_list_by_query_callback(void *array, int argc, char **argv, char **azColName)
 {
 	UNUSED(argc);
@@ -1087,7 +1099,7 @@ int oph_get_workers_list_by_query_status (worker_struct **out_list, int *len, ch
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "Cannot open database. Database %s is locked or does not exist\n", db_location);
 
 	int workers_number = 0;
-	if (sqlite3_exec(db, query, get_single_param_callback, &workers_number, &err_msg) != SQLITE_OK) {
+	if (sqlite3_exec(db, query, get_count_callback, &workers_number, &err_msg) != SQLITE_OK) {
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "SQL error on select query: %s\n", err_msg);
 		return RMANAGER_ERROR;
 	}
