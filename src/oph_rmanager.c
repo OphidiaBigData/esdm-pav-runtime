@@ -1039,20 +1039,6 @@ int oph_get_workers_number_by_status(int *workers_number, char *status) {
 	return RMANAGER_SUCCESS;
 }
 
-int get_kill_list_callback(void *array, int argc, char **argv, char **azColName)
-{
-	UNUSED(azColName);
-
-	int *list = (int *) array;
-
-	if(argv[0]) {
-		list[list_index] = atoi(argv[0]);
-		list_index += 1;
-	}
-
-	return 0;
-}
-
 int get_workers_list_by_query_callback(void *array, int argc, char **argv, char **azColName)
 {
 	UNUSED(argc);
@@ -1064,28 +1050,28 @@ int get_workers_list_by_query_callback(void *array, int argc, char **argv, char 
 		return 1;
 	else {
 		int neededSize = snprintf(NULL, 0, "%s", argv[0]);
-		(list + sizeof(worker_struct)*out_list_len)->id_worker = (char *) malloc(neededSize + 1);
-		snprintf((list + sizeof(worker_struct)*out_list_len)->id_worker, neededSize + 1, "%s", argv[0]);
+		list[out_list_len].id_worker = (char *) malloc(neededSize + 1);
+		snprintf(list[out_list_len].id_worker, neededSize + 1, "%s", argv[0]);
 
 		neededSize = snprintf(NULL, 0, "%s", argv[1]);
-		(list + sizeof(worker_struct)*out_list_len)->hostname = (char *) malloc(neededSize + 1);
-		snprintf((list + sizeof(worker_struct)*out_list_len)->hostname, neededSize + 1, "%s", argv[1]);
+		list[out_list_len].hostname = (char *) malloc(neededSize + 1);
+		snprintf(list[out_list_len].hostname, neededSize + 1, "%s", argv[1]);
 
 		neededSize = snprintf(NULL, 0, "%s", argv[2]);
-		(list + sizeof(worker_struct)*out_list_len)->port = (char *) malloc(neededSize + 1);
-		snprintf((list + sizeof(worker_struct)*out_list_len)->port, neededSize + 1, "%s", argv[2]);
+		list[out_list_len].port = (char *) malloc(neededSize + 1);
+		snprintf(list[out_list_len].port, neededSize + 1, "%s", argv[2]);
 
 		neededSize = snprintf(NULL, 0, "%s", argv[3]);
-		(list + sizeof(worker_struct)*out_list_len)->delete_queue_name = (char *) malloc(neededSize + 1);
-		snprintf((list + sizeof(worker_struct)*out_list_len)->delete_queue_name, neededSize + 1, "%s", argv[3]);
+		list[out_list_len].delete_queue_name = (char *) malloc(neededSize + 1);
+		snprintf(list[out_list_len].delete_queue_name, neededSize + 1, "%s", argv[3]);
 
 		neededSize = snprintf(NULL, 0, "%s", argv[4]);
-		(list + sizeof(worker_struct)*out_list_len)->status = (char *) malloc(neededSize + 1);
-		snprintf((list + sizeof(worker_struct)*out_list_len)->status, neededSize + 1, "%s", argv[4]);
+		list[out_list_len].status = (char *) malloc(neededSize + 1);
+		snprintf(list[out_list_len].status, neededSize + 1, "%s", argv[4]);
 
 		neededSize = snprintf(NULL, 0, "%s", argv[5]);
-		(list + sizeof(worker_struct)*out_list_len)->pid = (char *) malloc(neededSize + 1);
-		snprintf((list + sizeof(worker_struct)*out_list_len)->pid, neededSize + 1, "%s", argv[5]);
+		list[out_list_len].pid = (char *) malloc(neededSize + 1);
+		snprintf(list[out_list_len].pid, neededSize + 1, "%s", argv[5]);
 
 		out_list_len ++;
 	}
@@ -1093,16 +1079,16 @@ int get_workers_list_by_query_callback(void *array, int argc, char **argv, char 
 	return 0;
 }
 
-int oph_get_workers_list_by_query_status (worker_struct **out_list, int *len, char *status, char *query) {
+int oph_get_workers_list_by_query_status (worker_struct **out_list, int *len, char *query) {
 	sqlite3 *db = NULL;
 	char *err_msg = 0;
 
 	while (sqlite3_open_v2(db_location, &db, SQLITE_OPEN_READWRITE, NULL) != SQLITE_OK)
 		pmesg(LOG_ERROR, __FILE__, __LINE__, "Cannot open database. Database %s is locked or does not exist\n", db_location);
 
-	int workers_number;
-	if (oph_get_workers_number_by_status(&workers_number, status)) {
-		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Number of workers cannot be retrieved\n");
+	int workers_number = 0;
+	if (sqlite3_exec(db, query, get_single_param_callback, &workers_number, &err_msg) != SQLITE_OK) {
+		pmesg(LOG_ERROR, __FILE__, __LINE__, "SQL error on select query: %s\n", err_msg);
 		return RMANAGER_ERROR;
 	}
 
@@ -1164,8 +1150,8 @@ int oph_undeploy_worker (worker_struct worker) {
 int oph_undeploy_workers (int w_number) {
 	worker_struct *idle_list = NULL;
 	int list_len = 0;
-	if (oph_get_workers_list_by_query_status(&idle_list, &list_len, "up",
-			"SELECT * FROM worker WHERE id_worker NOT IN (select id_worker from job);")) {
+	if (oph_get_workers_list_by_query_status(&idle_list, &list_len,
+		"SELECT * FROM worker WHERE status=\"up\" and id_worker NOT IN (select id_worker from job);")) {
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to retrieve number of idle workers!\n");
 		return RMANAGER_ERROR;
 	}
@@ -1174,7 +1160,7 @@ int oph_undeploy_workers (int w_number) {
 		worker_struct *kill_list = NULL;
 		int kill_list_len = 0;
 
-		if (oph_get_workers_list_by_query_status(&kill_list, &kill_list_len, "up",
+		if (oph_get_workers_list_by_query_status(&kill_list, &kill_list_len,
 				"SELECT * FROM worker WHERE id_worker IN (select id_worker from job);")) {
 			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to retrieve active workers to kill\n");
 			return RMANAGER_ERROR;
@@ -1189,14 +1175,14 @@ int oph_undeploy_workers (int w_number) {
 		}
 
 		for (ii=0; ii < kill_list_len; ii++) {
-			free(kill_list[ii].id_worker);
-			free(kill_list[ii].hostname);
-			free(kill_list[ii].port);
-			free(kill_list[ii].delete_queue_name);
-			free(kill_list[ii].status);
-			free(kill_list[ii].pid);
-			free(kill_list + sizeof(worker_struct)*ii);
+			if (kill_list[ii].id_worker) free(kill_list[ii].id_worker);
+			if (kill_list[ii].hostname) free(kill_list[ii].hostname);
+			if (kill_list[ii].port) free(kill_list[ii].port);
+			if (kill_list[ii].delete_queue_name) free(kill_list[ii].delete_queue_name);
+			if (kill_list[ii].status) free(kill_list[ii].status);
+			if (kill_list[ii].pid) free(kill_list[ii].pid);
 		}
+		free(kill_list);
 	} else { // THERE ARE IDLE WORKERS
 		if (w_number <= list_len) { // UNDEPLOY n_workers WORKERS FROM THE IDLE ONES
 			int ii;
@@ -1219,7 +1205,7 @@ int oph_undeploy_workers (int w_number) {
 			worker_struct *kill_list = NULL;
 			int kill_list_len = 0;
 
-			if (oph_get_workers_list_by_query_status(&kill_list, &kill_list_len, "up",
+			if (oph_get_workers_list_by_query_status(&kill_list, &kill_list_len,
 					"SELECT * FROM worker WHERE id_worker IN (select id_worker from job);")) {
 				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to retrieve number of active workers!\n");
 				return RMANAGER_ERROR;
@@ -1233,27 +1219,27 @@ int oph_undeploy_workers (int w_number) {
 			}
 
 			for (ii=0; ii < kill_list_len; ii++) {
-				free(kill_list[ii].id_worker);
-				free(kill_list[ii].hostname);
-				free(kill_list[ii].port);
-				free(kill_list[ii].delete_queue_name);
-				free(kill_list[ii].status);
-				free(kill_list[ii].pid);
-				free(kill_list + sizeof(worker_struct)*ii);
+				if (kill_list[ii].id_worker) free(kill_list[ii].id_worker);
+				if (kill_list[ii].hostname) free(kill_list[ii].hostname);
+				if (kill_list[ii].port) free(kill_list[ii].port);
+				if (kill_list[ii].delete_queue_name) free(kill_list[ii].delete_queue_name);
+				if (kill_list[ii].status) free(kill_list[ii].status);
+				if (kill_list[ii].pid) free(kill_list[ii].pid);
 			}
+			free(kill_list);
 		}
 	}
 
 	int ii;
 	for (ii=0; ii < list_len; ii++) {
-		free(idle_list[ii].id_worker);
-		free(idle_list[ii].hostname);
-		free(idle_list[ii].port);
-		free(idle_list[ii].delete_queue_name);
-		free(idle_list[ii].status);
-		free(idle_list[ii].pid);
-		free(idle_list + sizeof(worker_struct)*ii);
+		if (idle_list[ii].id_worker) free(idle_list[ii].id_worker);
+		if (idle_list[ii].hostname) free(idle_list[ii].hostname);
+		if (idle_list[ii].port) free(idle_list[ii].port);
+		if (idle_list[ii].delete_queue_name) free(idle_list[ii].delete_queue_name);
+		if (idle_list[ii].status) free(idle_list[ii].status);
+		if (idle_list[ii].pid) free(idle_list[ii].pid);
 	}
+	free(idle_list);
 
 	return RMANAGER_SUCCESS;
 

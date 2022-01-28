@@ -4857,7 +4857,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 							worker_struct *reserved_list = NULL;
 							int list_len = 0;
 							if (reserved_workers > 0) {
-								if (oph_get_workers_list_by_query_status(&reserved_list, &list_len, "up",
+								if (oph_get_workers_list_by_query_status(&reserved_list, &list_len,
 										"SELECT * FROM worker WHERE status=\"up\";")) {
 									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Number of reserved workers cannot be retrieved\n");
 									snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to retrieve number of reserved workers!");
@@ -5053,7 +5053,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 									}
 
 									if (oph_json_add_grid
-										(oper_json, OPH_JSON_OBJKEY_CLUSTER_LIST, "Reserved workers", NULL, jsonkeys, num_fields, fieldtypes, num_fields)) {
+										(oper_json, OPH_JSON_OBJKEY_CLUSTER_LIST, "\nReserved workers", NULL, jsonkeys, num_fields, fieldtypes, num_fields)) {
 										pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "ADD GRID error\n");
 										for (iii = 0; iii < num_fields; iii++)
 											if (jsonkeys[iii])
@@ -5093,7 +5093,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 											break;
 										}
 										jjj = 0;
-										snprintf(tmp, OPH_MAX_STRING_SIZE, "%s", (reserved_list + sizeof(worker_struct)*ii)->hostname);
+										snprintf(tmp, OPH_MAX_STRING_SIZE, "%s", reserved_list[ii].hostname);
 										jsonvalues[jjj] = strdup(tmp);
 										if (!jsonvalues[jjj]) {
 											pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
@@ -5105,7 +5105,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 											break;
 										}
 										jjj++;
-										snprintf(tmp, OPH_MAX_STRING_SIZE, "%s", (reserved_list + sizeof(worker_struct)*ii)->port);
+										snprintf(tmp, OPH_MAX_STRING_SIZE, "%s", reserved_list[ii].port);
 										jsonvalues[jjj] = strdup(tmp);
 										if (!jsonvalues[jjj]) {
 											pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
@@ -5117,7 +5117,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 											break;
 										}
 										jjj++;
-										snprintf(tmp, OPH_MAX_STRING_SIZE, "%s", (reserved_list + sizeof(worker_struct)*ii)->delete_queue_name);
+										snprintf(tmp, OPH_MAX_STRING_SIZE, "%s", reserved_list[ii].delete_queue_name);
 										jsonvalues[jjj] = strdup(tmp);
 										if (!jsonvalues[jjj]) {
 											pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
@@ -5129,7 +5129,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 											break;
 										}
 										jjj++;
-										snprintf(tmp, OPH_MAX_STRING_SIZE, "%s", (reserved_list + sizeof(worker_struct)*ii)->status);
+										snprintf(tmp, OPH_MAX_STRING_SIZE, "%s", reserved_list[ii].status);
 										jsonvalues[jjj] = strdup(tmp);
 										if (!jsonvalues[jjj]) {
 											pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
@@ -5141,7 +5141,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 											break;
 										}
 										jjj++;
-										snprintf(tmp, OPH_MAX_STRING_SIZE, "%s", (reserved_list + sizeof(worker_struct)*ii)->pid);
+										snprintf(tmp, OPH_MAX_STRING_SIZE, "%s", reserved_list[ii].pid);
 										jsonvalues[jjj] = strdup(tmp);
 										if (!jsonvalues[jjj]) {
 											pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
@@ -5153,7 +5153,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 											break;
 										}
 										jjj++;
-										snprintf(tmp, OPH_MAX_STRING_SIZE, "worker_%s", (reserved_list + sizeof(worker_struct)*ii)->id_worker);
+										snprintf(tmp, OPH_MAX_STRING_SIZE, "worker_%s", reserved_list[ii].id_worker);
 										jsonvalues[jjj] = strdup(tmp);
 										if (!jsonvalues[jjj]) {
 											pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
@@ -5179,29 +5179,27 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 												free(jsonvalues[iii]);
 										if (jsonvalues)
 											free(jsonvalues);
-
-										ii++;
 									}
 								}
 							}
 
-							if (reserved_list) {
-								int jj;
-								for (jj=0; jj < list_len; jj++) {
-									free((reserved_list + sizeof(worker_struct)*jj)->id_worker);
-									free((reserved_list + sizeof(worker_struct)*jj)->hostname);
-									free((reserved_list + sizeof(worker_struct)*jj)->port);
-									free((reserved_list + sizeof(worker_struct)*jj)->delete_queue_name);
-									free((reserved_list + sizeof(worker_struct)*jj)->status);
-									free((reserved_list + sizeof(worker_struct)*jj)->pid);
-									free(reserved_list + sizeof(worker_struct)*jj);
-								}
+							int jj;
+							for (jj=0; jj < list_len; jj++) {
+								if (reserved_list[jj].id_worker) free(reserved_list[jj].id_worker);
+								if (reserved_list[jj].hostname) free(reserved_list[jj].hostname);
+								if (reserved_list[jj].port) free(reserved_list[jj].port);
+								if (reserved_list[jj].delete_queue_name) free(reserved_list[jj].delete_queue_name);
+								if (reserved_list[jj].status) free(reserved_list[jj].status);
+								if (reserved_list[jj].pid) free(reserved_list[jj].pid);
 							}
+							free(reserved_list);
+
+							success = 2;
 
 							worker_struct *avail_list = NULL;
 							list_len = 0;
 							if (avail_workers > 0) {
-								if (oph_get_workers_list_by_query_status (&avail_list, &list_len, "down",
+								if (oph_get_workers_list_by_query_status (&avail_list, &list_len,
 										"SELECT * FROM worker WHERE status=\"down\";")) {
 									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Number of available workers cannot be retrieved\n");
 									snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to retrieve number of available workers!");
@@ -5397,7 +5395,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 									}
 
 									if (oph_json_add_grid
-										(oper_json, OPH_JSON_OBJKEY_CLUSTER_LIST, "Available workers", NULL, jsonkeys, num_fields, fieldtypes, num_fields)) {
+										(oper_json, OPH_JSON_OBJKEY_CLUSTER_LIST, "\nAvailable workers", NULL, jsonkeys, num_fields, fieldtypes, num_fields)) {
 										pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "ADD GRID error\n");
 										for (iii = 0; iii < num_fields; iii++)
 											if (jsonkeys[iii])
@@ -5437,7 +5435,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 											break;
 										}
 										jjj = 0;
-										snprintf(tmp, OPH_MAX_STRING_SIZE, "%s", (avail_list + sizeof(worker_struct)*ii)->hostname);
+										snprintf(tmp, OPH_MAX_STRING_SIZE, "%s", avail_list[ii].hostname);
 										jsonvalues[jjj] = strdup(tmp);
 										if (!jsonvalues[jjj]) {
 											pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
@@ -5449,7 +5447,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 											break;
 										}
 										jjj++;
-										snprintf(tmp, OPH_MAX_STRING_SIZE, "%s", (avail_list + sizeof(worker_struct)*ii)->port);
+										snprintf(tmp, OPH_MAX_STRING_SIZE, "%s", avail_list[ii].port);
 										jsonvalues[jjj] = strdup(tmp);
 										if (!jsonvalues[jjj]) {
 											pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
@@ -5461,7 +5459,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 											break;
 										}
 										jjj++;
-										snprintf(tmp, OPH_MAX_STRING_SIZE, "%s", (avail_list + sizeof(worker_struct)*ii)->delete_queue_name);
+										snprintf(tmp, OPH_MAX_STRING_SIZE, "%s", avail_list[ii].delete_queue_name);
 										jsonvalues[jjj] = strdup(tmp);
 										if (!jsonvalues[jjj]) {
 											pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
@@ -5473,7 +5471,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 											break;
 										}
 										jjj++;
-										snprintf(tmp, OPH_MAX_STRING_SIZE, "%s", (avail_list + sizeof(worker_struct)*ii)->status);
+										snprintf(tmp, OPH_MAX_STRING_SIZE, "%s", avail_list[ii].status);
 										jsonvalues[jjj] = strdup(tmp);
 										if (!jsonvalues[jjj]) {
 											pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
@@ -5485,7 +5483,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 											break;
 										}
 										jjj++;
-										snprintf(tmp, OPH_MAX_STRING_SIZE, "%s", (avail_list + sizeof(worker_struct)*ii)->pid);
+										snprintf(tmp, OPH_MAX_STRING_SIZE, "%s", avail_list[ii].pid);
 										jsonvalues[jjj] = strdup(tmp);
 										if (!jsonvalues[jjj]) {
 											pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
@@ -5497,7 +5495,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 											break;
 										}
 										jjj++;
-										snprintf(tmp, OPH_MAX_STRING_SIZE, "worker_%s", (avail_list + sizeof(worker_struct)*ii)->id_worker);
+										snprintf(tmp, OPH_MAX_STRING_SIZE, "worker_%s", avail_list[ii].id_worker);
 										jsonvalues[jjj] = strdup(tmp);
 										if (!jsonvalues[jjj]) {
 											pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
@@ -5523,24 +5521,19 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 												free(jsonvalues[iii]);
 										if (jsonvalues)
 											free(jsonvalues);
-
-										ii++;
 									}
 								}
 							}
 
-							if (avail_list) {
-								int jj;
-								for (jj=0; jj < list_len; jj++) {
-									free((avail_list + sizeof(worker_struct)*jj)->id_worker);
-									free((avail_list + sizeof(worker_struct)*jj)->hostname);
-									free((avail_list + sizeof(worker_struct)*jj)->port);
-									free((avail_list + sizeof(worker_struct)*jj)->delete_queue_name);
-									free((avail_list + sizeof(worker_struct)*jj)->status);
-									free((avail_list + sizeof(worker_struct)*jj)->pid);
-									free(avail_list + sizeof(worker_struct)*jj);
-								}
+							for (jj=0; jj < list_len; jj++) {
+								if (avail_list[jj].id_worker) free(avail_list[jj].id_worker);
+								if (avail_list[jj].hostname) free(avail_list[jj].hostname);
+								if (avail_list[jj].port) free(avail_list[jj].port);
+								if (avail_list[jj].delete_queue_name) free(avail_list[jj].delete_queue_name);
+								if (avail_list[jj].status) free(avail_list[jj].status);
+								if (avail_list[jj].pid) free(avail_list[jj].pid);
 							}
+							free(avail_list);
 
 							success = 1;
 
