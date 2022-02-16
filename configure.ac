@@ -303,7 +303,7 @@ PKG_CHECK_MODULES(XML, libxml-2.0 >= 2.4)
 AC_ARG_WITH(libxml_header_path,
 	   [  --with-libxml-header-path=PATH 		Location of libxml2 include directory],
 	   [
-		libxml_header_path="$withval"
+		libxml_header_path="-I$withval"
 	   ],
 	   [
 		libxml_header_path="$XML_CFLAGS"
@@ -311,7 +311,7 @@ AC_ARG_WITH(libxml_header_path,
 AC_ARG_WITH(libxml_lib_path,
 	   [  --with-libxml-lib-path=PATH 		Location of libxml2.a],
 	   [
-		libxml_lib_path="$withval"
+		libxml_lib_path="-L$withval"
 	   ],
 	   [
 		libxml_lib_path="$XML_LIBS"
@@ -326,7 +326,7 @@ PKG_CHECK_MODULES(CURL, libcurl >= 0.23)
 AC_ARG_WITH(libcurl_header_path,
 	   [  --with-libcurl-header-path=PATH 		Location of libcurl include directory],
 	   [
-		libcurl_header_path="$withval"
+		libcurl_header_path="-I$withval"
 	   ],
 	   [
 		libcurl_header_path="$CURL_CFLAGS"
@@ -334,7 +334,7 @@ AC_ARG_WITH(libcurl_header_path,
 AC_ARG_WITH(libcurl_lib_path,
 	   [  --with-libcurl-lib-path=PATH 		Location of libcurl.a],
 	   [
-		libcurl_lib_path="$withval"
+		libcurl_lib_path="-L$withval"
 	   ],
 	   [
 		libcurl_lib_path="$CURL_LIBS"
@@ -349,7 +349,7 @@ PKG_CHECK_MODULES(OPENSSL, openssl >= 1.0.0)
 AC_ARG_WITH(libopenssl_header_path,
 	   [  --with-libopenssl-header-path=PATH 		Location of openssl include directory],
 	   [
-		libopenssl_header_path="$withval"
+		libopenssl_header_path="-I$withval"
 	   ],
 	   [
 		libopenssl_header_path="$OPENSSL_CFLAGS"
@@ -357,7 +357,7 @@ AC_ARG_WITH(libopenssl_header_path,
 AC_ARG_WITH(libopenssl_lib_path,
 	   [  --with-libopenssl-lib-path=PATH 		Location of openssl],
 	   [
-		libopenssl_lib_path="$withval"
+		libopenssl_lib_path="-L$withval"
 	   ],
  	   [
 		libopenssl_lib_path="$OPENSSL_LIBS"
@@ -381,7 +381,7 @@ PKG_CHECK_MODULES(SSH2, libssh2 >= 0.23)
 AC_ARG_WITH(libssh2_header_path,
 	   [  --with-libssh2-header-path=PATH 		Location of libssh2 include directory],
 	   [
-		libssh2_header_path="$withval"
+		libssh2_header_path="-I$withval"
 	   ],
      [
     libssh2_header_path="$SSH2_CFLAGS"
@@ -389,7 +389,7 @@ AC_ARG_WITH(libssh2_header_path,
 AC_ARG_WITH(libssh2_lib_path,
 	   [  --with-libssh2-lib-path=PATH 		Location of libssh2],
 	   [
-		libssh2_lib_path="$withval"
+		libssh2_lib_path="-L$withval"
 	   ],
      [
     libssh2_lib_path="$SSH2_LIBS"
@@ -426,7 +426,7 @@ PKG_CHECK_MODULES(JANSSON, jansson >= 2.3)
 AC_ARG_WITH(jansson_header_path,
        [  --with-jansson-header-path=PATH        Location of Jansson include directory],
        [
-        jansson_header_path="$withval"
+        jansson_header_path="-I$withval"
        ],
      [
     jansson_header_path="$JANSSON_CFLAGS"
@@ -434,15 +434,15 @@ AC_ARG_WITH(jansson_header_path,
 AC_ARG_WITH(jansson_lib_path,
        [  --with-jansson-lib-path=PATH       Location of jansson lib],
        [
-        jansson_lib_path="$withval"
+        jansson_lib_path="-L$withval"
        ],
      [
     jansson_lib_path="$JANSSON_LIBS"
      ])
-JANSON_CFLAGS="$jansson_header_path"
-AC_SUBST(JANSON_CFLAGS)
-JANSON_LIBS="$jansson_lib_path"
-AC_SUBST(JANSON_LIBS)
+JANSSON_INCLUDE="$jansson_header_path"
+AC_SUBST(JANSSON_INCLUDE)
+JANSSON_LIB="$jansson_lib_path"
+AC_SUBST(JANSSON_LIB)
 JANSSON_LIBDIR=`pkg-config --variable=libdir jansson`
 AC_SUBST(JANSSON_LIBDIR)
 
@@ -558,7 +558,7 @@ if test "x$db" = "xno"; then
 	AC_ARG_WITH(sqlite_header_path,
 		   [  --with-sqlite-header-path=PATH 		Location of sqlite include directory],
 		   [
-			sqlite_header_path="$withval"
+			sqlite_header_path="-I$withval"
 		   ],
 		   [
 			sqlite_header_path="$SQLITE_CFLAGS"
@@ -566,7 +566,7 @@ if test "x$db" = "xno"; then
 	AC_ARG_WITH(sqlite_lib_path,
 		   [  --with-sqlite-lib-path=PATH 		Location of sqlite],
 		   [
-			sqlite_lib_path="$withval"
+			sqlite_lib_path="-L$withval"
 		   ],
 	 	   [
 			sqlite_lib_path="$SQLITE_LIBS"
@@ -582,7 +582,7 @@ PKG_CHECK_MODULES(LIBRABBITMQ, librabbitmq >= 0.10.0)
 AC_ARG_WITH(librabbitmq_header_path,
 		[ --with-librabbitmq-header-path=PATH Location of librabbitmq include directory],
 		[
-				librabbitmq_header_path="$withval"
+				librabbitmq_header_path="-I$withval"
 		],
 		[
 				librabbitmq_header_path="$LIBRABBITMQ_CFLAGS"
@@ -590,7 +590,7 @@ AC_ARG_WITH(librabbitmq_header_path,
 AC_ARG_WITH(librabbitmq_lib_path,
 		[ --with-librabbitmq-lib-path=PATH Location of librabbitmq lib],
 		[
-				librabbitmq_lib_path="$withval"
+				librabbitmq_lib_path="-L$withval"
 		],
 		[
 				librabbitmq_lib_path="$LIBRABBITMQ_LIBS"
