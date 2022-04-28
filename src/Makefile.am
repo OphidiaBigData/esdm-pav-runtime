@@ -359,6 +359,12 @@ liboph_management_operators_la_CFLAGS = -prefer-pic -I. ${lib_CFLAGS} $(ADDITION
 liboph_management_operators_la_LDFLAGS = -shared
 liboph_management_operators_la_LIBADD = $(ADDITIONAL_LIBS) -L. -loph_workflow_engine
 
+if MULTI_NODE
+if UPDATE_CANCELLATION
+liboph_management_operators_la_CFLAGS += -DMULTI_NODE_SUPPORT -DUPDATE_CANCELLATION_SUPPORT
+endif
+endif
+
 LIBRARY += liboph_known_operators.la
 liboph_known_operators_la_SOURCES = oph_known_operators.c
 liboph_known_operators_la_CFLAGS = -prefer-pic -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYSQL_CFLAGS) -Ioph_workflow

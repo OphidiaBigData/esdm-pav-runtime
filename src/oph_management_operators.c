@@ -4490,9 +4490,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 			return OPH_SERVER_SYSTEM_ERROR;
 
 		error = OPH_SERVER_NO_RESPONSE;
-	}
-#ifdef MULTI_NODE_SUPPORT
-	else if (!strncasecmp(operator_name, OPH_OPERATOR_PAV_WORKER, OPH_MAX_STRING_SIZE)) {
+	} else if (!strncasecmp(operator_name, OPH_OPERATOR_PAV_WORKER, OPH_MAX_STRING_SIZE)) {
 
 		pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Execute known operator '%s'\n", operator_name);
 
@@ -4642,6 +4640,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 
 				int workers_number, reserved_workers, avail_workers;
 
+#if defined (MULTI_NODE_SUPPORT) && defined (UPDATE_CANCELLATION_SUPPORT)
 				switch (btype) {
 
 					case 0:{
@@ -5665,6 +5664,10 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 
 					default:;
 				}
+#else
+				snprintf(error_message, OPH_MAX_STRING_SIZE, "The PAV worker operator can be used by activating both multi node and update-cancellation options only");
+				success = 0;
+#endif
 
 				break;
 			}
@@ -5723,7 +5726,6 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 		error = OPH_SERVER_NO_RESPONSE;
 
 	}
-#endif
 
 	return error;
 }
