@@ -69,7 +69,7 @@
 #define OPH_ARG_QUERY "query"
 #define OPH_ARG_SUBSET_DIMS "subset_dims"
 #define OPH_ARG_SUBSET_TYPE "subset_type"
-#define OPH_ARG_TIME_FILTER "type_filter"
+#define OPH_ARG_TIME_FILTER "time_filter"
 #ifdef OPH_OPENID_SUPPORT
 #define OPH_ARG_ACCESS_TOKEN "access_token"
 #define OPH_ARG_REFRESH_TOKEN "refresh_token"
@@ -113,6 +113,7 @@
 #define OPH_OPERATOR_MANAGE_SESSION "oph_manage_session"
 #define OPH_OPERATOR_CANCEL "oph_cancel"
 #define OPH_OPERATOR_CLUSTER "oph_cluster"
+#define OPH_OPERATOR_IMPORTNCS "oph_importncs"
 #define OPH_OPERATOR_PAV_WORKER "oph_pav_worker"
 
 // Known parameters

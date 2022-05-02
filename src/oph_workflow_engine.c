@@ -134,26 +134,33 @@ char *oph_remake_notification(const char *error_notification, int task_index, in
 {
 	if (!error_notification)
 		return NULL;
-	char tmp0[OPH_MAX_STRING_SIZE], tmp1[OPH_MAX_STRING_SIZE], tmp2[OPH_MAX_STRING_SIZE], *pch, *save_pointer = NULL, *cube = NULL, *cwd = NULL, *output = NULL, *pointer, close;
-	size_t len;
+	size_t len, maxlen = OPH_MAX_STRING_SIZE + (submit_string ? strlen(submit_string) : 0);
+	char *tmp0 = strdup(error_notification);
+	if (!tmp0)
+		return NULL;
+	char *tmp1 = (char *) malloc(maxlen * sizeof(char));
+	if (!tmp1) {
+		free(tmp0);
+		return NULL;
+	}
 	*tmp1 = 0;
-	snprintf(tmp0, OPH_MAX_STRING_SIZE, "%s", error_notification);
+	char tmp2[OPH_MAX_STRING_SIZE], *pch, *save_pointer = NULL, *cube = NULL, *cwd = NULL, *output = NULL, *pointer, close;
 	pch = strtok_r(tmp0, OPH_SEPARATOR_PARAM, &save_pointer);
 	while (pch) {
 		if (!strncasecmp(pch, OPH_ARG_JOBID, strlen(OPH_ARG_JOBID))) {
 			snprintf(tmp2, OPH_MAX_STRING_SIZE, "%s%s%d", OPH_ARG_JOBID, OPH_SEPARATOR_KV, odb_jobid);
-			strncat(tmp1, tmp2, OPH_MAX_STRING_SIZE - strlen(tmp1));
+			strcat(tmp1, tmp2);
 		} else if (!strncasecmp(pch, OPH_ARG_TASKINDEX, strlen(OPH_ARG_TASKINDEX))) {
 			snprintf(tmp2, OPH_MAX_STRING_SIZE, "%s%s%d", OPH_ARG_TASKINDEX, OPH_SEPARATOR_KV, task_index);
-			strncat(tmp1, tmp2, OPH_MAX_STRING_SIZE - strlen(tmp1));
+			strcat(tmp1, tmp2);
 		} else if (!strncasecmp(pch, OPH_ARG_LIGHTTASKINDEX, strlen(OPH_ARG_LIGHTTASKINDEX))) {
 			snprintf(tmp2, OPH_MAX_STRING_SIZE, "%s%s%d", OPH_ARG_LIGHTTASKINDEX, OPH_SEPARATOR_KV, light_task_index);
-			strncat(tmp1, tmp2, OPH_MAX_STRING_SIZE - strlen(tmp1));
+			strcat(tmp1, tmp2);
 		} else if (!strncasecmp(pch, OPH_ARG_STATUS, strlen(OPH_ARG_STATUS))) {
 			snprintf(tmp2, OPH_MAX_STRING_SIZE, "%s%s%d", OPH_ARG_STATUS, OPH_SEPARATOR_KV, new_status);
-			strncat(tmp1, tmp2, OPH_MAX_STRING_SIZE - strlen(tmp1));
+			strcat(tmp1, tmp2);
 		} else {
-			strncat(tmp1, pch, OPH_MAX_STRING_SIZE - strlen(tmp1));
+			strcat(tmp1, pch);
 			if (!strncasecmp(pch, OPH_ARG_CWD, strlen(OPH_ARG_CWD)))
 				cwd = pch;
 			else if (!strncasecmp(pch, OPH_ARG_CUBE, strlen(OPH_ARG_CUBE)))
@@ -161,44 +168,46 @@ char *oph_remake_notification(const char *error_notification, int task_index, in
 			else if (!strncasecmp(pch, OPH_OPERATOR_PARAMETER_OUTPUT, strlen(OPH_OPERATOR_PARAMETER_OUTPUT)))
 				output = pch;
 		}
-		strncat(tmp1, OPH_SEPARATOR_PARAM, OPH_MAX_STRING_SIZE - strlen(tmp1));
+		strcat(tmp1, OPH_SEPARATOR_PARAM);
 		pch = strtok_r(NULL, OPH_SEPARATOR_PARAM, &save_pointer);
 	}
+	free(tmp0);
 	// Transfer "cube" and "cwd" to notification string
 	if (submit_string) {
-		snprintf(tmp0, OPH_MAX_STRING_SIZE, "%s", submit_string);
+		tmp0 = strdup(submit_string);
 		pch = strtok_r(tmp0, OPH_SEPARATOR_PARAM, &save_pointer);
 		while (pch) {
 			if (!cwd && !strncasecmp(pch, OPH_ARG_CWD, strlen(OPH_ARG_CWD))) {
 				close = 0;
 				len = 1 + strlen(OPH_ARG_CWD);
 				if (pch[len] != OPH_WORKFLOW_ROOT_FOLDER[0]) {
-					strncat(tmp1, pch, OPH_MAX_STRING_SIZE - strlen(tmp1));
+					strcat(tmp1, pch);
 					close = 1;
 				} else if (!oph_get_session_code(sessionid, tmp2)) {
 					pointer = strstr(pch + len, tmp2);
 					if (pointer && (pointer == pch + len + 1)) {
-						strncat(tmp1, OPH_ARG_CWD, OPH_MAX_STRING_SIZE - strlen(tmp1));
-						strncat(tmp1, OPH_SEPARATOR_KV, OPH_MAX_STRING_SIZE - strlen(tmp1));
+						strcat(tmp1, OPH_ARG_CWD);
+						strcat(tmp1, OPH_SEPARATOR_KV);
 						pointer = strchr(pointer, OPH_WORKFLOW_ROOT_FOLDER[0]);
-						strncat(tmp1, pointer && (strlen(pointer) > 1) ? pointer : OPH_WORKFLOW_ROOT_FOLDER, OPH_MAX_STRING_SIZE - strlen(tmp1));
+						strcat(tmp1, pointer && (strlen(pointer) > 1) ? pointer : OPH_WORKFLOW_ROOT_FOLDER);
 						close = 1;
 					}
 				}
 				if (close)
-					strncat(tmp1, OPH_SEPARATOR_PARAM, OPH_MAX_STRING_SIZE - strlen(tmp1));
+					strcat(tmp1, OPH_SEPARATOR_PARAM);
 			} else if (!cube && !strncasecmp(pch, OPH_ARG_CUBE, strlen(OPH_ARG_CUBE))) {
-				strncat(tmp1, pch, OPH_MAX_STRING_SIZE - strlen(tmp1));
-				strncat(tmp1, OPH_SEPARATOR_PARAM, OPH_MAX_STRING_SIZE - strlen(tmp1));
+				strcat(tmp1, pch);
+				strcat(tmp1, OPH_SEPARATOR_PARAM);
 			} else if (!output && !strncasecmp(pch, OPH_OPERATOR_PARAMETER_INPUT, strlen(OPH_OPERATOR_PARAMETER_INPUT))) {
-				strncat(tmp1, OPH_ARG_FILE, OPH_MAX_STRING_SIZE - strlen(tmp1));
-				strncat(tmp1, pch + strlen(OPH_OPERATOR_PARAMETER_INPUT), OPH_MAX_STRING_SIZE - strlen(tmp1));
-				strncat(tmp1, OPH_SEPARATOR_PARAM, OPH_MAX_STRING_SIZE - strlen(tmp1));
+				strcat(tmp1, OPH_ARG_FILE);
+				strcat(tmp1, pch + strlen(OPH_OPERATOR_PARAMETER_INPUT));
+				strcat(tmp1, OPH_SEPARATOR_PARAM);
 			}
 			pch = strtok_r(NULL, OPH_SEPARATOR_PARAM, &save_pointer);
 		}
+		free(tmp0);
 	}
-	return strdup(tmp1);
+	return tmp1;
 }
 
 int oph_build_hash(char *str, unsigned int len)
@@ -826,7 +835,7 @@ int oph_check_for_massive_operation(struct oph_plugin_data *state, char ttype, i
 		return OPH_SERVER_SYSTEM_ERROR;
 	}
 
-	int i;
+	int i, j = -1;
 	oph_workflow_task *task = &(wf->tasks[task_index]);
 
 	char auto_retry = oph_auto_retry && task->residual_auto_retry_num && (task->retry_num == 1);
@@ -863,6 +872,7 @@ int oph_check_for_massive_operation(struct oph_plugin_data *state, char ttype, i
 		if (!strcmp(task->arguments_keys[i], OPH_ARG_SRC_PATH)) {
 			src_path_key = task->arguments_keys[i];
 			src_path = task->arguments_values[i];
+			j = i;
 		} else if (!strcmp(task->arguments_keys[i], OPH_ARG_CUBE)) {
 			if (!ncubes) {
 				datacube_input_key = task->arguments_keys[i];
@@ -924,6 +934,42 @@ int oph_check_for_massive_operation(struct oph_plugin_data *state, char ttype, i
 					free(datacube_inputs[i]);
 			free(datacube_inputs);
 			datacube_inputs = NULL;
+		}
+		// Do not consider input for OPH_IMPORTNCS as massive, but expand the value of the parameter
+		if (datacube_inputs && src_path && number && !strcasecmp(task->operator, OPH_OPERATOR_IMPORTNCS) && (j >= 0)) {
+			size_t max_dim = number * OPH_LONG_STRING_SIZE;
+			char *tmp = (char *) malloc(max_dim);
+			if (!tmp) {
+				pmesg(LOG_ERROR, __FILE__, __LINE__, "%c%d: memory error\n", ttype, jobid);
+				for (i = 0; i < (int) number; ++i)
+					if (datacube_inputs[i])
+						free(datacube_inputs[i]);
+				free(datacube_inputs);
+				datacube_inputs = NULL;
+				if (measure_name) {
+					for (i = 0; i < (int) number; ++i)
+						if (measure_name[i])
+							free(measure_name[i]);
+					free(measure_name);
+					measure_name = 0;
+				}
+				return OPH_SERVER_SYSTEM_ERROR;
+			}
+			*tmp = 0;
+			char next = 0;
+			for (i = 0; i < (int) number; ++i)
+				if (datacube_inputs[i]) {
+					if (next)
+						strncat(tmp, OPH_SEPARATOR_SUBPARAM_STR, max_dim - strlen(tmp));
+					strncat(tmp, datacube_inputs[i], max_dim - strlen(tmp));
+					free(datacube_inputs[i]);
+					next = 1;
+				}
+			free(datacube_inputs);
+			datacube_inputs = NULL;
+			free(task->arguments_values[j]);
+			task->arguments_values[j] = tmp;
+			pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: argument '%s' of task '%s' has been updated to '%s'\n", ttype, jobid, task->arguments_keys[j], task->name, tmp);
 		}
 
 		if (datacube_inputs) {
@@ -3255,7 +3301,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 
 		pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: check if the notification has to be neglected\n", ttype, jobid);
 		if (light_task_index >= 0) {
-			if (wf->tasks[task_index].light_tasks[light_task_index].status >= OPH_ODB_STATUS_COMPLETED) {
+			if (!wf->tasks[task_index].light_tasks[light_task_index].status || (wf->tasks[task_index].light_tasks[light_task_index].status >= OPH_ODB_STATUS_COMPLETED)) {
 				pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: status of child %d of task '%s' has been already updated to %s in memory; skip the notification for status %s\n", ttype,
 				      jobid, light_task_index, wf->tasks[task_index].name, oph_odb_convert_status_to_str(wf->tasks[task_index].light_tasks[light_task_index].status),
 				      oph_odb_convert_status_to_str(odb_status));
@@ -3263,7 +3309,7 @@ int oph_workflow_notify(struct oph_plugin_data *state, char ttype, int jobid, ch
 				process_notification = 0;
 			}
 		} else {
-			if (wf->tasks[task_index].status >= OPH_ODB_STATUS_COMPLETED) {
+			if (!wf->tasks[task_index].status || (wf->tasks[task_index].status >= OPH_ODB_STATUS_COMPLETED)) {
 				pmesg(LOG_DEBUG, __FILE__, __LINE__, "%c%d: status of task '%s' has been already updated to %s in memory; skip the notification for status %s\n", ttype, jobid,
 				      wf->tasks[task_index].name, oph_odb_convert_status_to_str(wf->tasks[task_index].status), oph_odb_convert_status_to_str(odb_status));
 				pthread_mutex_unlock(&global_flag);
@@ -6747,21 +6793,22 @@ int oph_workflow_print_list(oph_workflow_ordered_list * list, char **string)
 	if (!list || !string)
 		return OPH_WORKFLOW_EXIT_BAD_PARAM_ERROR;
 
-	int n = 0;
-	char tmp[OPH_MAX_STRING_SIZE], flag = 0;
-
-	if (*string) {
-		n += snprintf(tmp, OPH_MAX_STRING_SIZE, "%s", *string);
-		flag = 1;
-	}
-
+	int r;
+	char *tmp;
 	while (list) {
-		n += snprintf(tmp + n, OPH_MAX_STRING_SIZE - n, "%s%s", flag ? OPH_SEPARATOR_SUBPARAM_STR : "", list->object);
-		flag = 1;
+		if (*string) {
+			tmp = NULL;
+			r = asprintf(&tmp, "%s%s%s", *string, OPH_SEPARATOR_SUBPARAM_STR, list->object);
+			free(*string);
+		} else if (!(tmp = strdup(list->object)))
+			r = -1;
+		if (r < 0) {
+			pmesg(LOG_ERROR, __FILE__, __LINE__, "Error while filling an argument\n");
+			return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+		}
+		*string = tmp;
 		list = list->next;
 	}
-
-	*string = strdup(tmp);
 
 	return OPH_WORKFLOW_EXIT_SUCCESS;
 }
