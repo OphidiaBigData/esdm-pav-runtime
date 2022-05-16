@@ -566,7 +566,7 @@ if test "x$db" = "xno"; then
 	AC_ARG_WITH(sqlite_lib_path,
 		   [  --with-sqlite-lib-path=PATH 		Location of sqlite],
 		   [
-			sqlite_lib_path="-L$withval"
+			sqlite_lib_path="-L$withval -lrabbitmq"
 		   ],
 	 	   [
 			sqlite_lib_path="$SQLITE_LIBS"
