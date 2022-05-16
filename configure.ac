@@ -506,7 +506,7 @@ OPH_DIRECT_OUTPUT=$direct_output
 AC_SUBST(OPH_DIRECT_OUTPUT)
 
 OPH_DB_SUPPORT=
-AC_ARG_ENABLE(db, [  --enable-db	Enable Ophidia DB support. (Disabeld by default)], [ db="yes" ], [ db="no" ])
+AC_ARG_ENABLE(db, [  --enable-db	Enable Ophidia DB support. (Disabled by default)], [ db="yes" ], [ db="no" ])
 if test "x$db" = "xyes"; then
 	AC_MSG_NOTICE(Ophidia DB enabled)
 else
@@ -566,7 +566,7 @@ if test "x$db" = "xno"; then
 	AC_ARG_WITH(sqlite_lib_path,
 		   [  --with-sqlite-lib-path=PATH 		Location of sqlite],
 		   [
-			sqlite_lib_path="-L$withval"
+			sqlite_lib_path="-L$withval -lrabbitmq"
 		   ],
 	 	   [
 			sqlite_lib_path="$SQLITE_LIBS"
