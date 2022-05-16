@@ -566,7 +566,7 @@ if test "x$db" = "xno"; then
 	AC_ARG_WITH(sqlite_lib_path,
 		   [  --with-sqlite-lib-path=PATH 		Location of sqlite],
 		   [
-			sqlite_lib_path="-L$withval -lrabbitmq"
+			sqlite_lib_path="-L$withval"
 		   ],
 	 	   [
 			sqlite_lib_path="$SQLITE_LIBS"
@@ -590,7 +590,7 @@ AC_ARG_WITH(librabbitmq_header_path,
 AC_ARG_WITH(librabbitmq_lib_path,
 		[ --with-librabbitmq-lib-path=PATH Location of librabbitmq lib],
 		[
-				librabbitmq_lib_path="-L$withval"
+				librabbitmq_lib_path="-L$withval -lrabbitmq"
 		],
 		[
 				librabbitmq_lib_path="$LIBRABBITMQ_LIBS"
