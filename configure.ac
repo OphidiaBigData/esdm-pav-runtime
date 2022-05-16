@@ -506,7 +506,7 @@ OPH_DIRECT_OUTPUT=$direct_output
 AC_SUBST(OPH_DIRECT_OUTPUT)
 
 OPH_DB_SUPPORT=
-AC_ARG_ENABLE(db, [  --enable-db	Enable Ophidia DB support. (Disabeld by default)], [ db="yes" ], [ db="no" ])
+AC_ARG_ENABLE(db, [  --enable-db	Enable Ophidia DB support. (Disabled by default)], [ db="yes" ], [ db="no" ])
 if test "x$db" = "xyes"; then
 	AC_MSG_NOTICE(Ophidia DB enabled)
 else
