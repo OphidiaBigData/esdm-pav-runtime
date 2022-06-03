@@ -141,11 +141,11 @@ endif
 
 LIBRARY =
 
-LIBRARY += libhashtbl.la
-libhashtbl_la_SOURCES = hashtbl.c
-libhashtbl_la_CFLAGS = -prefer-pic -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS)
-libhashtbl_la_LDFLAGS = -shared
-libhashtbl_la_LIBADD = $(ADDITIONAL_LIBS)
+LIBRARY += libhashtbl_runtime.la
+libhashtbl_runtime_la_SOURCES = hashtbl.c
+libhashtbl_runtime_la_CFLAGS = -prefer-pic -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS)
+libhashtbl_runtime_la_LDFLAGS = -shared
+libhashtbl_runtime_la_LIBADD = $(ADDITIONAL_LIBS)
 
 LIBRARY += liboph_json.la
 liboph_json_la_SOURCES = oph_json/oph_json_common.c oph_json/oph_json_graph.c oph_json/oph_json_grid.c  oph_json/oph_json_multigrid.c oph_json/oph_json_text.c oph_json/oph_json_tree.c
@@ -157,13 +157,13 @@ LIBRARY += liboph_workflow.la
 liboph_workflow_la_SOURCES = oph_workflow/oph_workflow_parsing.c oph_workflow/oph_workflow_setup.c oph_workflow/oph_workflow_structs.c oph_workflow/oph_workflow_utils.c
 liboph_workflow_la_CFLAGS= -prefer-pic -I. -Ioph_workflow $(JANSSON_INCLUDE) ${lib_CFLAGS} $(ADDITIONAL_CFLAGS)
 liboph_workflow_la_LDFLAGS = -shared -Wl,-rpath -Wl,$(JANSSON_LIBDIR)
-liboph_workflow_la_LIBADD = $(ADDITIONAL_LIBS) $(JANSSON_LIB) -L. -lhashtbl
+liboph_workflow_la_LIBADD = $(ADDITIONAL_LIBS) $(JANSSON_LIB) -L. -lhashtbl_runtime
 
-LIBRARY += libdebug.la
-libdebug_la_SOURCES = debug.c
-libdebug_la_CFLAGS = -prefer-pic -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS)
-libdebug_la_LDFLAGS = -shared
-libdebug_la_LIBADD = $(ADDITIONAL_LIBS)
+LIBRARY += libdebug_runtime.la
+libdebug_runtime_la_SOURCES = debug.c
+libdebug_runtime_la_CFLAGS = -prefer-pic -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS)
+libdebug_runtime_la_LDFLAGS = -shared
+libdebug_runtime_la_LIBADD = $(ADDITIONAL_LIBS)
 
 LIBRARY += libsoapC.la
 libsoapC_la_SOURCES = soapC.c
@@ -223,20 +223,20 @@ LIBRARY += liboph_auth.la
 liboph_auth_la_SOURCES = oph_auth.c
 liboph_auth_la_CFLAGS = -prefer-pic -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) $(MYSQL_CFLAGS) $(OPENID_CFLAGS) $(AAA_CFLAGS)
 liboph_auth_la_LDFLAGS = -shared $(OPENID_LDFLAGS) $(AAA_LDFLAGS)
-liboph_auth_la_LIBADD = $(ADDITIONAL_LIBS) $(OPENID_LIBS) $(AAA_LIBS) -L. -loph_ophidiadb -loph_parser -loph_service_info -lhashtbl
+liboph_auth_la_LIBADD = $(ADDITIONAL_LIBS) $(OPENID_LIBS) $(AAA_LIBS) -L. -loph_ophidiadb -loph_parser -loph_service_info -lhashtbl_runtime
 
 if MULTI_NODE
 LIBRARY += librabbitmq_utils.la
 librabbitmq_utils_la_SOURCES = rabbitmq_utils.c
 librabbitmq_utils_la_CFLAGS = -prefer-pic -I. $(ADDITIONAL_CFLAGS)
 librabbitmq_utils_la_LDFLAGS = -shared $(OPENID_LDFLAGS) $(AAA_LDFLAGS)
-librabbitmq_utils_la_LIBADD = $(ADDITIONAL_LIBS) $(OPENID_LIBS) $(AAA_LIBS) -L. -ldebug 
+librabbitmq_utils_la_LIBADD = $(ADDITIONAL_LIBS) $(OPENID_LIBS) $(AAA_LIBS) -L. -ldebug_runtime 
 
 LIBRARY += liboph_server_conf.la
 liboph_server_conf_la_SOURCES = oph_server_confs.c
 liboph_server_conf_la_CFLAGS = -prefer-pic -I. $(ADDITIONAL_CFLAGS)
 liboph_server_conf_la_LDFLAGS = -shared $(OPENID_LDFLAGS) $(AAA_LDFLAGS)
-liboph_server_conf_la_LIBADD = $(ADDITIONAL_LIBS) $(OPENID_LIBS) $(AAA_LIBS) -L. -ldebug -lhashtbl
+liboph_server_conf_la_LIBADD = $(ADDITIONAL_LIBS) $(OPENID_LIBS) $(AAA_LIBS) -L. -ldebug_runtime -lhashtbl_runtime
 endif
 
 LIBRARY += liboph_ssh_submit.la
@@ -244,7 +244,7 @@ liboph_ssh_submit_la_SOURCES = oph_ssh_submit.c
 liboph_ssh_submit_la_CFLAGS = -prefer-pic -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) ${LIBSSH2_CFLAGS}
 liboph_ssh_submit_la_LDFLAGS = -shared
 if MULTI_NODE
-liboph_ssh_submit_la_LIBADD = $(ADDITIONAL_LIBS) ${LIBSSH2_LIBS} -L. -lhashtbl -loph_server_conf -lrabbitmq_utils 
+liboph_ssh_submit_la_LIBADD = $(ADDITIONAL_LIBS) ${LIBSSH2_LIBS} -L. -lhashtbl_runtime -loph_server_conf -lrabbitmq_utils 
 else
 liboph_ssh_submit_la_LIBADD = $(ADDITIONAL_LIBS) ${LIBSSH2_LIBS} -L.
 endif
@@ -387,9 +387,9 @@ esdm_pav_runtime_SOURCES= $(INTERFACE_TYPE)/oph_server.c
 esdm_pav_runtime_CFLAGS= $(OPT) -I. ${lib_CFLAGS} $(ADDITIONAL_CFLAGS) -Ioph_workflow $(MYSQL_CFLAGS) $(MYCFLAGS_THREADS)
 esdm_pav_runtime_LDFLAGS= $(MYLDFLAGS_THREADS)
 if MULTI_NODE
-esdm_pav_runtime_LDADD= $(ADDITIONAL_LIBS) ${MYSQL_LDFLAGS} -L. -lsoapServer -lstdsoap2 -lutils -loph_ophidiadb -loph_auth -loph_task_parser_library -lhashtbl -loph_service_info -loph_odb_job -ldebug -lthreads -loph_plugin -loph_rmanager -loph_notify -loph_known_operators -loph_execute_main -loph_job_list -loph_workflow_engine -loph_ssh_submit
+esdm_pav_runtime_LDADD= $(ADDITIONAL_LIBS) ${MYSQL_LDFLAGS} -L. -lsoapServer -lstdsoap2 -lutils -loph_ophidiadb -loph_auth -loph_task_parser_library -lhashtbl_runtime -loph_service_info -loph_odb_job -ldebug_runtime -lthreads -loph_plugin -loph_rmanager -loph_notify -loph_known_operators -loph_execute_main -loph_job_list -loph_workflow_engine -loph_ssh_submit
 else
-esdm_pav_runtime_LDADD= $(ADDITIONAL_LIBS) ${MYSQL_LDFLAGS} -L. -lsoapServer -lstdsoap2 -lutils -loph_ophidiadb -loph_auth -loph_task_parser_library -lhashtbl -loph_service_info -loph_odb_job -ldebug -lthreads -loph_plugin -loph_rmanager -loph_notify -loph_known_operators -loph_execute_main -loph_job_list -loph_workflow_engine
+esdm_pav_runtime_LDADD= $(ADDITIONAL_LIBS) ${MYSQL_LDFLAGS} -L. -lsoapServer -lstdsoap2 -lutils -loph_ophidiadb -loph_auth -loph_task_parser_library -lhashtbl_runtime -loph_service_info -loph_odb_job -ldebug_runtime -lthreads -loph_plugin -loph_rmanager -loph_notify -loph_known_operators -loph_execute_main -loph_job_list -loph_workflow_engine
 endif
 
 clean-local:
