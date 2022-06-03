@@ -446,7 +446,7 @@ AC_SUBST(JANSSON_LIB)
 JANSSON_LIBDIR=`pkg-config --variable=libdir jansson`
 AC_SUBST(JANSSON_LIBDIR)
 
-AC_ARG_ENABLE(openid, [  --disable-openid	Disable OpenID. (Enabled by default)], [ openid="no" ], [ openid="yes" ])
+AC_ARG_ENABLE(openid, [  --enable-openid	Enable OpenID. (Disable by default)], [ openid="yes" ], [ openid="no" ])
 if test "x$openid" = "xyes"; then
 openid=no
 CJOSE_CONFIG=
@@ -485,7 +485,7 @@ AM_CONDITIONAL([OPENID_SUPPORT], [test "x$openid" = "xyes"])
 OPH_OPENID_SUPPORT=$openid
 AC_SUBST(OPH_OPENID_SUPPORT)
 
-AC_ARG_ENABLE(aaa, [  --disable-aaa	Disable AAA. (Enabled by default)], [ aaa="no" ], [ aaa="yes" ])
+AC_ARG_ENABLE(aaa, [  --enable-aaa	Enable AAA. (Disabled by default)], [ aaa="yes" ], [ aaa="no" ])
 if test "x$aaa" = "xyes"; then
 	AC_MSG_NOTICE(AAA enabled)
 else
