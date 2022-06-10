@@ -48,6 +48,8 @@
 
 #include <sqlite3.h>
 
+#define OPH_SQLITE_SELECT_JOBS "SELECT ip_address, port, delete_queue_name FROM worker GROUP BY ip_address, port, delete_queue_name;"
+
 #ifndef MULTI_RABBITMQ_CONN_SUPPORT
 amqp_connection_state_t single_rabbitmq_publish_conn = NULL;
 amqp_channel_t channel = 1;
@@ -277,19 +279,14 @@ int _system(const char *command)
 	int status;
 
 #ifdef MULTI_NODE_SUPPORT
-	char *my_command = strdup(command);
 
-	char *current = 0, *next = 0;
+	int neededSize;
+	char *my_command = strdup(command), *current = NULL, *next = NULL;
 
 	if (split_by_delimiter(my_command, ' ', 1, &current, &next) != 0) {
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Failed to split by delimiter\n");
 		return 1;
 	}
-
-	int neededSize = snprintf(NULL, 0, "%s", current);
-	char *aaa = (char *) malloc(neededSize + 1);
-	snprintf(aaa, neededSize + 1, "%s", current);
-	free(aaa);
 
 	if (strstr(command, "oph_cancel") != NULL) {
 		if (split_by_delimiter(next, ' ', 1, &current, &next) != 0) {
@@ -313,12 +310,17 @@ int _system(const char *command)
 			return 1;
 		}
 
-		neededSize = snprintf(NULL, 0, "SELECT ip_address, port, delete_queue_name FROM job_table GROUP BY ip_address, port, delete_queue_name;");
+		neededSize = snprintf(NULL, 0, OPH_SQLITE_SELECT_JOBS);
 		char *select_distinct_sql = (char *) malloc(neededSize + 1);
-		snprintf(select_distinct_sql, neededSize + 1, "SELECT ip_address, port, delete_queue_name FROM job_table GROUP BY ip_address, port, delete_queue_name;");
+		snprintf(select_distinct_sql, neededSize + 1, OPH_SQLITE_SELECT_JOBS);
 
-		while (sqlite3_exec(db, select_distinct_sql, send_delete_message, 0, &err_msg) != SQLITE_OK)
-			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "SQL error on select query: %s\n", err_msg);
+		char counter = 3;
+		while (counter && (sqlite3_exec(db, select_distinct_sql, send_delete_message, 0, &err_msg) != SQLITE_OK)) {
+			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "SQL error on select query: %s\n", err_msg);
+			counter--;
+			if (!counter)
+				pmesg_safe(&global_flag, LOG_WARNING, __FILE__, __LINE__, "Fail to cancel the workflow: aborting!\n");
+		}
 
 		sqlite3_close(db);
 		free(select_distinct_sql);
@@ -326,7 +328,9 @@ int _system(const char *command)
 		free(wid_tocancel);
 
 		return 0;
+
 	} else if (strstr(command, "submit_local.sh") != NULL) {
+
 		if (split_by_delimiter(next, ' ', 1, &current, &next) != 0) {
 			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Failed to split by delimiter\n");
 			return 1;
@@ -354,11 +358,6 @@ int _system(const char *command)
 			return 1;
 		}
 
-		neededSize = snprintf(NULL, 0, "%s", current);
-		aaa = (char *) malloc(neededSize + 1);
-		snprintf(aaa, neededSize + 1, "%s", current);
-		free(aaa);
-
 		if (split_by_delimiter(next, ' ', 1, &current, &next) != 0) {
 			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Failed to split by delimiter\n");
 			return 1;
@@ -375,20 +374,10 @@ int _system(const char *command)
 			return 1;
 		}
 
-		neededSize = snprintf(NULL, 0, "%s", current);
-		aaa = (char *) malloc(neededSize + 1);
-		snprintf(aaa, neededSize + 1, "%s", current);
-		free(aaa);
-
 		if (split_by_delimiter(next, ' ', 1, &current, &next) != 0) {
 			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Failed to split by delimiter\n");
 			return 1;
 		}
-
-		neededSize = snprintf(NULL, 0, "%s", current);
-		aaa = (char *) malloc(neededSize + 1);
-		snprintf(aaa, neededSize + 1, "%s", current);
-		free(aaa);
 
 		if (split_by_delimiter(next, ' ', 1, &current, &next) != 0) {
 			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Failed to split by delimiter\n");
