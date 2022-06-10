@@ -276,8 +276,6 @@ int _system(const char *command)
 	if (!command)
 		return -1;
 
-	int status;
-
 #ifdef MULTI_NODE_SUPPORT
 
 	int neededSize;
@@ -458,10 +456,13 @@ int _system(const char *command)
 			return 1;
 #endif
 
-		status = 0;
+		return 0;
 	}
-#else
+
+#endif
+
 	pid_t childPid;
+	int status = 0;
 
 	switch (childPid = fork()) {
 
@@ -482,7 +483,6 @@ int _system(const char *command)
 			}
 			break;
 	}
-#endif
 
 	return status;
 }
