@@ -274,7 +274,8 @@ int _system(const char *command)
 	if (!command)
 		return -1;
 
-	int status;
+	pid_t childPid;
+	int status = 0;
 
 #ifdef MULTI_NODE_SUPPORT
 	char *my_command = strdup(command);
