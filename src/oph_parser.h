@@ -1,6 +1,6 @@
 /*
     Ophidia Server
-    Copyright (C) 2012-2021 CMCC Foundation
+    Copyright (C) 2012-2022 CMCC Foundation
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -115,6 +115,9 @@
 #define OPH_OPERATOR_CLUSTER "oph_cluster"
 #define OPH_OPERATOR_IMPORTNCS "oph_importncs"
 #define OPH_OPERATOR_PAV_WORKER "oph_pav_worker"
+#ifndef OPH_DB_SUPPORT
+#define OPH_OPERATOR_LOGGINGBK "oph_loggingbk"
+#endif
 
 // Known parameters
 #define OPH_OPERATOR_PARAMETER_LOG_TYPE "log_type"
@@ -212,7 +215,7 @@
 
 typedef enum { OPH_MODE_UNKNOWN, OPH_MODE_ASYNC, OPH_MODE_SYNC } oph_mode_type;
 typedef enum { OPH_NO_OPERATOR, OPH_LOG_INFO_OPERATOR, OPH_GET_CONFIG_OPERATOR, OPH_RESUME_OPERATOR, OPH_SERVICE_OPERATOR, OPH_MANAGE_SESSION_OPERATOR, OPH_CANCEL_OPERATOR,
-	OPH_CLUSTER_OPERATOR, OPH_PAV_WORKER_OPERATOR
+	OPH_CLUSTER_OPERATOR, OPH_PAV_WORKER_OPERATOR, OPH_LOGGINGBK_OPERATOR
 } oph_known_operators;
 
 typedef struct _oph_argument {
