@@ -1,6 +1,6 @@
 /*
     Ophidia Server
-    Copyright (C) 2012-2021 CMCC Foundation
+    Copyright (C) 2012-2022 CMCC Foundation
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -594,8 +594,10 @@ int oph_odb_retrieve_ids(ophidiadb * oDB, const char *command, int **id, char **
 	if (sqlite3_exec(oDB->db, query, _oph_odb_get_list_callback, &res, NULL))
 		return OPH_ODB_MYSQL_ERROR;
 
-	if (res.number_of_cols != 2)
+	if (res.number_of_cols != 2) {
+		_oph_sqlite_free_list(res.head);
 		return OPH_ODB_TOO_MANY_ROWS;
+	}
 
 	*nn = res.number_of_rows;
 	if (!(*nn))

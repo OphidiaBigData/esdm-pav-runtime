@@ -1,6 +1,6 @@
 /*
     Ophidia Server
-    Copyright (C) 2012-2021 CMCC Foundation
+    Copyright (C) 2012-2022 CMCC Foundation
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -706,6 +706,11 @@ int oph__ophExecuteMain(struct soap *soap, xsd__string request, struct oph__ophR
 		} else if (!strncasecmp(wf->tasks[i].operator, OPH_OPERATOR_PAV_WORKER, OPH_MAX_STRING_SIZE)) {
 			oph_known_operator = OPH_PAV_WORKER_OPERATOR;
 			wf->tasks[i].is_known = 1;
+#ifndef OPH_DB_SUPPORT
+		} else if (!strncasecmp(wf->tasks[i].operator, OPH_OPERATOR_LOGGINGBK, OPH_MAX_STRING_SIZE)) {
+			oph_known_operator = OPH_LOGGINGBK_OPERATOR;
+			wf->tasks[i].is_known = 1;
+#endif
 		} else
 			nstandardcommands++;
 	}
