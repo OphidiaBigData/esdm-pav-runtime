@@ -589,40 +589,41 @@ int oph_form_subm_string(const char *request, const int ncores, char *outfile, s
 			break;
 #ifdef MULTI_NODE_SUPPORT
 		case 3:{
-			if (!orm->subm_cmd_deploy_workers) {
-				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Parameter '%s' is not set\n", SUBM_CMD_TO_DEPLOY_WORKERS);
-				return RMANAGER_ERROR;
+				if (!orm->subm_cmd_deploy_workers) {
+					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Parameter '%s' is not set\n", SUBM_CMD_TO_DEPLOY_WORKERS);
+					return RMANAGER_ERROR;
+				}
+				command = orm->subm_cmd_deploy_workers;
+
+				int len = OPH_MAX_STRING_SIZE + strlen(request);
+				if (!(*cmd = (char *) malloc(len * sizeof(char)))) {
+					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+					return RMANAGER_MEMORY_ERROR;
+				}
+
+				sprintf(*cmd, "%s %d", command, ncores);
+				pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Submission string:\n%s\n", *cmd);
+
+				return RMANAGER_SUCCESS;
 			}
-			command = orm->subm_cmd_deploy_workers;
+		case 4:{
+				if (!orm->subm_cmd_undeploy_workers) {
+					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Parameter '%s' is not set\n", SUBM_CMD_TO_UNDEPLOY_WORKERS);
+					return RMANAGER_ERROR;
+				}
+				command = orm->subm_cmd_undeploy_workers;
 
-			int len = OPH_MAX_STRING_SIZE + strlen(request);
-			if (!(*cmd = (char *) malloc(len * sizeof(char)))) {
-				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
-				return RMANAGER_MEMORY_ERROR;
+				int len = OPH_MAX_STRING_SIZE + strlen(request);
+				if (!(*cmd = (char *) malloc(len * sizeof(char)))) {
+					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+					return RMANAGER_MEMORY_ERROR;
+				}
+
+				sprintf(*cmd, "%s %s %d", command, killer, ncores);
+				pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Submission string:\n%s\n", *cmd);
+
+				return RMANAGER_SUCCESS;
 			}
-
-			sprintf(*cmd, "%s %d", command, ncores);
-			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Submission string:\n%s\n", *cmd);
-
-			return RMANAGER_SUCCESS;
-		} case 4: {
-			if (!orm->subm_cmd_undeploy_workers) {
-				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Parameter '%s' is not set\n", SUBM_CMD_TO_UNDEPLOY_WORKERS);
-				return RMANAGER_ERROR;
-			}
-			command = orm->subm_cmd_undeploy_workers;
-
-			int len = OPH_MAX_STRING_SIZE + strlen(request);
-			if (!(*cmd = (char *) malloc(len * sizeof(char)))) {
-				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
-				return RMANAGER_MEMORY_ERROR;
-			}
-
-			sprintf(*cmd, "%s %s %d", command, killer, ncores);
-			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Submission string:\n%s\n", *cmd);
-
-			return RMANAGER_SUCCESS;
-		}
 #endif
 		default:
 			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unknown command type\n");
@@ -993,7 +994,7 @@ int get_workers_info_callback(void *NotUsed, int argc, char **argv, char **azCol
 	UNUSED(NotUsed);
 	UNUSED(azColName);
 
-	if(argv[0])
+	if (argv[0])
 		workers_n = atoi(argv[0]);
 	else
 		workers_n = 0;
@@ -1001,7 +1002,8 @@ int get_workers_info_callback(void *NotUsed, int argc, char **argv, char **azCol
 	return 0;
 }
 
-int oph_get_workers_number_by_status(int *workers_number, char *status) {
+int oph_get_workers_number_by_status(int *workers_number, char *status)
+{
 	if (!workers_number)
 		return RMANAGER_NULL_PARAM;
 	*workers_number = 0;
@@ -1035,7 +1037,7 @@ int get_max_count_callback(void *NotUsed, int argc, char **argv, char **azColNam
 	UNUSED(NotUsed);
 	UNUSED(azColName);
 
-	if(argv[0])
+	if (argv[0])
 		max_count = atoi(argv[0]);
 	else
 		max_count = 0;
@@ -1043,7 +1045,8 @@ int get_max_count_callback(void *NotUsed, int argc, char **argv, char **azColNam
 	return 0;
 }
 
-int oph_get_max_count(int *count) {
+int oph_get_max_count(int *count)
+{
 	if (!count)
 		return RMANAGER_NULL_PARAM;
 
@@ -1077,7 +1080,7 @@ int get_kill_list_callback(void *array, int argc, char **argv, char **azColName)
 
 	int *list = (int *) array;
 
-	if(argv[0]) {
+	if (argv[0]) {
 		list[list_index] = atoi(argv[0]);
 		list_index += 1;
 	}
@@ -1085,7 +1088,8 @@ int get_kill_list_callback(void *array, int argc, char **argv, char **azColName)
 	return 0;
 }
 
-int get_reserved_workers_tokill(int *out_list, int workers_number, char *killer) {
+int get_reserved_workers_tokill(int *out_list, int workers_number, char *killer)
+{
 	if (!out_list || !killer)
 		return RMANAGER_NULL_PARAM;
 
@@ -1097,7 +1101,7 @@ int get_reserved_workers_tokill(int *out_list, int workers_number, char *killer)
 		return RMANAGER_NULL_PARAM;
 	}
 
-	if(!strcmp(killer, "kill")) { // LOCAL KILLER
+	if (!strcmp(killer, "kill")) {	// LOCAL KILLER
 		int neededSize = snprintf(NULL, 0, "SELECT pid FROM worker WHERE pid != 0 ORDER BY pid DESC LIMIT %d;", workers_number);
 		char *get_pidlist_info = (char *) malloc(neededSize + 1);
 		snprintf(get_pidlist_info, neededSize + 1, "SELECT pid FROM worker WHERE pid != 0 ORDER BY pid DESC LIMIT %d;", workers_number);
@@ -1105,7 +1109,7 @@ int get_reserved_workers_tokill(int *out_list, int workers_number, char *killer)
 		while (sqlite3_exec(db, get_pidlist_info, get_kill_list_callback, out_list, &err_msg) != SQLITE_OK)
 			pmesg(LOG_ERROR, __FILE__, __LINE__, "SQL error on select query: %s\n", err_msg);
 		free(get_pidlist_info);
-	} else if(!strcmp(killer, "bkill")) { // EXTERN KILLER
+	} else if (!strcmp(killer, "bkill")) {	// EXTERN KILLER
 		int neededSize = snprintf(NULL, 0, "SELECT count FROM worker WHERE count != 0 ORDER BY count DESC LIMIT %d;", workers_number);
 		char *get_countlist_info = (char *) malloc(neededSize + 1);
 		snprintf(get_countlist_info, neededSize + 1, "SELECT count FROM worker WHERE count != 0 ORDER BY count DESC LIMIT %d;", workers_number);

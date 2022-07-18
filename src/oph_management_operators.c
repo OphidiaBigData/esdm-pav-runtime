@@ -6087,7 +6087,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 								}
 
 								int ii;
-								for (ii=1; ii<=n_workers; ii++) {
+								for (ii = 1; ii <= n_workers; ii++) {
 									char *cmd = NULL;
 									if (oph_form_subm_string(command, max_count + ii, outfile, 0, orm, idjob, os_username, project, wid, &cmd, 3)) {
 										pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error on forming submission string\n");
@@ -6107,7 +6107,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 									pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Submitting command: %s\n", cmd);
 
 									success = !system(cmd);
-									if(success) {
+									if (success) {
 										snprintf(error_message, OPH_MAX_STRING_SIZE, "Worker correctly deployed");
 										pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%s\n", error_message);
 									} else {
@@ -6119,7 +6119,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 								}
 							} else {
 								snprintf(error_message, OPH_MAX_STRING_SIZE, "Eccessive workers number: only %d worker%s "
-									"available", atoi(max_workers) - reserved_workers, atoi(max_workers) - reserved_workers == 1 ? " is" : "s are");
+									 "available", atoi(max_workers) - reserved_workers, atoi(max_workers) - reserved_workers == 1 ? " is" : "s are");
 								break;
 							}
 
@@ -6155,7 +6155,8 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 											if (oph_subm_user && strcasecmp(os_username, oph_subm_user)) {
 												snprintf(outfile, OPH_MAX_STRING_SIZE, "%s/%s", oph_txt_location, os_username);
 												oph_mkdir(outfile);
-												snprintf(outfile, OPH_MAX_STRING_SIZE, "%s/" OPH_TXT_FILENAME, oph_txt_location, os_username, code, markerid);
+												snprintf(outfile, OPH_MAX_STRING_SIZE, "%s/" OPH_TXT_FILENAME, oph_txt_location, os_username, code,
+													 markerid);
 											} else
 												snprintf(outfile, OPH_MAX_STRING_SIZE, OPH_TXT_FILENAME, oph_txt_location, code, markerid);
 										}
@@ -6170,7 +6171,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 									}
 
 									int ii;
-									for (ii=0; ii<n_workers; ii++) {
+									for (ii = 0; ii < n_workers; ii++) {
 										char *cmd = NULL;
 										if (oph_form_subm_string(command, kill_list[ii], outfile, 0, orm, idjob, os_username, project, wid, &cmd, 4)) {
 											pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error on forming submission string\n");
@@ -6190,7 +6191,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 										pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Submitting command: %s\n", cmd);
 
 										success = !system(cmd);
-										if(success) {
+										if (success) {
 											snprintf(error_message, OPH_MAX_STRING_SIZE, "Worker correctly stopped");
 											pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%s\n", error_message);
 										} else {
