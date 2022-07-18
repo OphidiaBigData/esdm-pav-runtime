@@ -598,40 +598,40 @@ int oph_form_subm_string(const char *request, const int ncores, char *outfile, s
 			break;
 #ifdef MULTI_NODE_SUPPORT
 		case 3:{
-			if (!strcmp(scheduler, LOCAL_SCHEDULER)) {
-				if (!orm->subm_cmd_deploy_workers_local_scheduler) {
-					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Parameter '%s' is not set\n", SUBM_CMD_TO_DEPLOY_WORKERS_LOCAL_SCHEDULER);
+				if (!strcmp(scheduler, LOCAL_SCHEDULER)) {
+					if (!orm->subm_cmd_deploy_workers_local_scheduler) {
+						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Parameter '%s' is not set\n", SUBM_CMD_TO_DEPLOY_WORKERS_LOCAL_SCHEDULER);
+						return RMANAGER_ERROR;
+					}
+					command = orm->subm_cmd_deploy_workers_local_scheduler;
+				} else if (!strcmp(scheduler, LSF_SCHEDULER)) {
+					if (!orm->subm_cmd_deploy_workers_lsf_scheduler) {
+						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Parameter '%s' is not set\n", SUBM_CMD_TO_DEPLOY_WORKERS_LSF_SCHEDULER);
+						return RMANAGER_ERROR;
+					}
+					command = orm->subm_cmd_deploy_workers_lsf_scheduler;
+				} else if (!strcmp(scheduler, SLURM_SCHEDULER)) {
+					if (!orm->subm_cmd_deploy_workers_slurm_scheduler) {
+						pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Parameter '%s' is not set\n", SUBM_CMD_TO_DEPLOY_WORKERS_SLURM_SCHEDULER);
+						return RMANAGER_ERROR;
+					}
+					command = orm->subm_cmd_deploy_workers_slurm_scheduler;
+				} else {
+					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Scheduler \"%s\" is not supported\n", scheduler);
 					return RMANAGER_ERROR;
 				}
-				command = orm->subm_cmd_deploy_workers_local_scheduler;
-			} else if (!strcmp(scheduler, LSF_SCHEDULER)) {
-				if (!orm->subm_cmd_deploy_workers_lsf_scheduler) {
-					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Parameter '%s' is not set\n", SUBM_CMD_TO_DEPLOY_WORKERS_LSF_SCHEDULER);
-					return RMANAGER_ERROR;
+
+				int len = OPH_MAX_STRING_SIZE + strlen(request);
+				if (!(*cmd = (char *) malloc(len * sizeof(char)))) {
+					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
+					return RMANAGER_MEMORY_ERROR;
 				}
-				command = orm->subm_cmd_deploy_workers_lsf_scheduler;
-			} else if (!strcmp(scheduler, SLURM_SCHEDULER)) {
-				if (!orm->subm_cmd_deploy_workers_slurm_scheduler) {
-					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Parameter '%s' is not set\n", SUBM_CMD_TO_DEPLOY_WORKERS_SLURM_SCHEDULER);
-					return RMANAGER_ERROR;
-				}
-				command = orm->subm_cmd_deploy_workers_slurm_scheduler;
-			} else {
-				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Scheduler \"%s\" is not supported\n", scheduler);
-				return RMANAGER_ERROR;
+
+				sprintf(*cmd, "%s", command);
+				pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Submission string:\n%s\n", *cmd);
+
+				return RMANAGER_SUCCESS;
 			}
-
-			int len = OPH_MAX_STRING_SIZE + strlen(request);
-			if (!(*cmd = (char *) malloc(len * sizeof(char)))) {
-				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
-				return RMANAGER_MEMORY_ERROR;
-			}
-
-			sprintf(*cmd, "%s", command);
-			pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Submission string:\n%s\n", *cmd);
-
-			return RMANAGER_SUCCESS;
-		}
 #endif
 		default:
 			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unknown command type\n");
@@ -1008,13 +1008,14 @@ int get_single_param_callback(void *number, int argc, char **argv, char **azColN
 
 	int *result = (int *) number;
 
-	if(argv[0])
+	if (argv[0])
 		*result = atoi(argv[0]);
 
 	return 0;
 }
 
-int oph_get_workers_number_by_status(int *workers_number, char *status) {
+int oph_get_workers_number_by_status(int *workers_number, char *status)
+{
 	if (!workers_number || !status)
 		return RMANAGER_NULL_PARAM;
 	*workers_number = 0;
@@ -1045,7 +1046,7 @@ int get_count_callback(void *number, int argc, char **argv, char **azColName)
 
 	int *result = (int *) number;
 
-	if(argv[0])
+	if (argv[0])
 		*result += 1;
 
 	return 0;
@@ -1085,13 +1086,14 @@ int get_workers_list_by_query_callback(void *array, int argc, char **argv, char 
 		list[out_list_len].pid = (char *) malloc(neededSize + 1);
 		snprintf(list[out_list_len].pid, neededSize + 1, "%s", argv[5]);
 
-		out_list_len ++;
+		out_list_len++;
 	}
 
 	return 0;
 }
 
-int oph_get_workers_list_by_query_status (worker_struct **out_list, int *len, char *query) {
+int oph_get_workers_list_by_query_status(worker_struct ** out_list, int *len, char *query)
+{
 	sqlite3 *db = NULL;
 	char *err_msg = 0;
 
@@ -1123,7 +1125,8 @@ int oph_get_workers_list_by_query_status (worker_struct **out_list, int *len, ch
 	return RMANAGER_SUCCESS;
 }
 
-int oph_undeploy_worker (worker_struct worker) {
+int oph_undeploy_worker(worker_struct worker)
+{
 	if (!worker.hostname || !worker.port || !worker.delete_queue_name)
 		return RMANAGER_ERROR;
 
@@ -1159,55 +1162,60 @@ int oph_undeploy_worker (worker_struct worker) {
 	return RMANAGER_SUCCESS;
 }
 
-int oph_undeploy_workers (int w_number) {
+int oph_undeploy_workers(int w_number)
+{
 	worker_struct *idle_list = NULL;
 	int list_len = 0;
-	if (oph_get_workers_list_by_query_status(&idle_list, &list_len,
-		"SELECT * FROM worker WHERE status=\"up\" and id_worker NOT IN (select id_worker from job);")) {
+	if (oph_get_workers_list_by_query_status(&idle_list, &list_len, "SELECT * FROM worker WHERE status=\"up\" and id_worker NOT IN (select id_worker from job);")) {
 		pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to retrieve number of idle workers!\n");
 		return RMANAGER_ERROR;
 	}
 
-	if (list_len == 0) { // NO IDLE WORKERS. UNDEPLOY WORKERS FROM THE ACTIVE ONES
+	if (list_len == 0) {	// NO IDLE WORKERS. UNDEPLOY WORKERS FROM THE ACTIVE ONES
 		worker_struct *kill_list = NULL;
 		int kill_list_len = 0;
 
-		if (oph_get_workers_list_by_query_status(&kill_list, &kill_list_len,
-				"SELECT * FROM worker WHERE id_worker IN (select id_worker from job);")) {
+		if (oph_get_workers_list_by_query_status(&kill_list, &kill_list_len, "SELECT * FROM worker WHERE id_worker IN (select id_worker from job);")) {
 			pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to retrieve active workers to kill\n");
 			return RMANAGER_ERROR;
 		}
 
 		int ii;
-		for (ii=kill_list_len-1; ii>=(kill_list_len-w_number); ii--) {
-			if(oph_undeploy_worker(kill_list[ii])){
+		for (ii = kill_list_len - 1; ii >= (kill_list_len - w_number); ii--) {
+			if (oph_undeploy_worker(kill_list[ii])) {
 				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to undeploy active workers\n");
 				return RMANAGER_ERROR;
 			}
 		}
 
-		for (ii=0; ii < kill_list_len; ii++) {
-			if (kill_list[ii].id_worker) free(kill_list[ii].id_worker);
-			if (kill_list[ii].hostname) free(kill_list[ii].hostname);
-			if (kill_list[ii].port) free(kill_list[ii].port);
-			if (kill_list[ii].delete_queue_name) free(kill_list[ii].delete_queue_name);
-			if (kill_list[ii].status) free(kill_list[ii].status);
-			if (kill_list[ii].pid) free(kill_list[ii].pid);
+		for (ii = 0; ii < kill_list_len; ii++) {
+			if (kill_list[ii].id_worker)
+				free(kill_list[ii].id_worker);
+			if (kill_list[ii].hostname)
+				free(kill_list[ii].hostname);
+			if (kill_list[ii].port)
+				free(kill_list[ii].port);
+			if (kill_list[ii].delete_queue_name)
+				free(kill_list[ii].delete_queue_name);
+			if (kill_list[ii].status)
+				free(kill_list[ii].status);
+			if (kill_list[ii].pid)
+				free(kill_list[ii].pid);
 		}
 		free(kill_list);
-	} else { // THERE ARE IDLE WORKERS
-		if (w_number <= list_len) { // UNDEPLOY n_workers WORKERS FROM THE IDLE ONES
+	} else {		// THERE ARE IDLE WORKERS
+		if (w_number <= list_len) {	// UNDEPLOY n_workers WORKERS FROM THE IDLE ONES
 			int ii;
-			for (ii=list_len-1; ii >= (list_len - w_number); ii--) {
-				if(oph_undeploy_worker(idle_list[ii])){
+			for (ii = list_len - 1; ii >= (list_len - w_number); ii--) {
+				if (oph_undeploy_worker(idle_list[ii])) {
 					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to undeploy idle workers\n");
 					return RMANAGER_ERROR;
 				}
 			}
-		} else { // UNDEPLOY ALL IDLE WORKERS AND THE REST FROM THE ACTIVE ONES
+		} else {	// UNDEPLOY ALL IDLE WORKERS AND THE REST FROM THE ACTIVE ONES
 			int ii;
-			for (ii=0; ii < list_len; ii++) {
-				if(oph_undeploy_worker(idle_list[ii])){
+			for (ii = 0; ii < list_len; ii++) {
+				if (oph_undeploy_worker(idle_list[ii])) {
 					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to undeploy workers\n");
 					return RMANAGER_ERROR;
 				}
@@ -1217,39 +1225,50 @@ int oph_undeploy_workers (int w_number) {
 			worker_struct *kill_list = NULL;
 			int kill_list_len = 0;
 
-			if (oph_get_workers_list_by_query_status(&kill_list, &kill_list_len,
-					"SELECT * FROM worker WHERE id_worker IN (select id_worker from job);")) {
+			if (oph_get_workers_list_by_query_status(&kill_list, &kill_list_len, "SELECT * FROM worker WHERE id_worker IN (select id_worker from job);")) {
 				pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to retrieve number of active workers!\n");
 				return RMANAGER_ERROR;
 			}
 
-			for (ii=kill_list_len-1; ii>=(kill_list_len-w_number+list_len); ii--) {
-				if(oph_undeploy_worker(kill_list[ii])){
+			for (ii = kill_list_len - 1; ii >= (kill_list_len - w_number + list_len); ii--) {
+				if (oph_undeploy_worker(kill_list[ii])) {
 					pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Unable to undeploy workers\n");
 					return RMANAGER_ERROR;
 				}
 			}
 
-			for (ii=0; ii < kill_list_len; ii++) {
-				if (kill_list[ii].id_worker) free(kill_list[ii].id_worker);
-				if (kill_list[ii].hostname) free(kill_list[ii].hostname);
-				if (kill_list[ii].port) free(kill_list[ii].port);
-				if (kill_list[ii].delete_queue_name) free(kill_list[ii].delete_queue_name);
-				if (kill_list[ii].status) free(kill_list[ii].status);
-				if (kill_list[ii].pid) free(kill_list[ii].pid);
+			for (ii = 0; ii < kill_list_len; ii++) {
+				if (kill_list[ii].id_worker)
+					free(kill_list[ii].id_worker);
+				if (kill_list[ii].hostname)
+					free(kill_list[ii].hostname);
+				if (kill_list[ii].port)
+					free(kill_list[ii].port);
+				if (kill_list[ii].delete_queue_name)
+					free(kill_list[ii].delete_queue_name);
+				if (kill_list[ii].status)
+					free(kill_list[ii].status);
+				if (kill_list[ii].pid)
+					free(kill_list[ii].pid);
 			}
 			free(kill_list);
 		}
 	}
 
 	int ii;
-	for (ii=0; ii < list_len; ii++) {
-		if (idle_list[ii].id_worker) free(idle_list[ii].id_worker);
-		if (idle_list[ii].hostname) free(idle_list[ii].hostname);
-		if (idle_list[ii].port) free(idle_list[ii].port);
-		if (idle_list[ii].delete_queue_name) free(idle_list[ii].delete_queue_name);
-		if (idle_list[ii].status) free(idle_list[ii].status);
-		if (idle_list[ii].pid) free(idle_list[ii].pid);
+	for (ii = 0; ii < list_len; ii++) {
+		if (idle_list[ii].id_worker)
+			free(idle_list[ii].id_worker);
+		if (idle_list[ii].hostname)
+			free(idle_list[ii].hostname);
+		if (idle_list[ii].port)
+			free(idle_list[ii].port);
+		if (idle_list[ii].delete_queue_name)
+			free(idle_list[ii].delete_queue_name);
+		if (idle_list[ii].status)
+			free(idle_list[ii].status);
+		if (idle_list[ii].pid)
+			free(idle_list[ii].pid);
 	}
 	free(idle_list);
 

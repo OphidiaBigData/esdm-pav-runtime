@@ -458,7 +458,6 @@ int _system(const char *command)
 
 		return 0;
 	}
-
 #endif
 
 	pid_t childPid;

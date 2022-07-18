@@ -6229,8 +6229,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 							worker_struct *reserved_list = NULL;
 							int list_len = 0;
 							if (reserved_workers > 0) {
-								if (oph_get_workers_list_by_query_status(&reserved_list, &list_len,
-										"SELECT * FROM worker WHERE status=\"up\";")) {
+								if (oph_get_workers_list_by_query_status(&reserved_list, &list_len, "SELECT * FROM worker WHERE status=\"up\";")) {
 									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Number of reserved workers cannot be retrieved\n");
 									snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to retrieve number of reserved workers!");
 									break;
@@ -6425,7 +6424,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 									}
 
 									if (oph_json_add_grid
-										(oper_json, OPH_JSON_OBJKEY_CLUSTER_LIST, "\nReserved workers", NULL, jsonkeys, num_fields, fieldtypes, num_fields)) {
+									    (oper_json, OPH_JSON_OBJKEY_CLUSTER_LIST, "\nReserved workers", NULL, jsonkeys, num_fields, fieldtypes, num_fields)) {
 										pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "ADD GRID error\n");
 										for (iii = 0; iii < num_fields; iii++)
 											if (jsonkeys[iii])
@@ -6452,13 +6451,12 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 
 									success = 2;
 								}
-
 								// Data
 								if (success == 2)
 									success = 0;
 								if (!success) {
 									int ii;
-									for (ii=0; ii < list_len; ii++) {
+									for (ii = 0; ii < list_len; ii++) {
 										jsonvalues = (char **) malloc(sizeof(char *) * num_fields);
 										if (!jsonvalues) {
 											pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
@@ -6556,13 +6554,19 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 							}
 
 							int jj;
-							for (jj=0; jj < list_len; jj++) {
-								if (reserved_list[jj].id_worker) free(reserved_list[jj].id_worker);
-								if (reserved_list[jj].hostname) free(reserved_list[jj].hostname);
-								if (reserved_list[jj].port) free(reserved_list[jj].port);
-								if (reserved_list[jj].delete_queue_name) free(reserved_list[jj].delete_queue_name);
-								if (reserved_list[jj].status) free(reserved_list[jj].status);
-								if (reserved_list[jj].pid) free(reserved_list[jj].pid);
+							for (jj = 0; jj < list_len; jj++) {
+								if (reserved_list[jj].id_worker)
+									free(reserved_list[jj].id_worker);
+								if (reserved_list[jj].hostname)
+									free(reserved_list[jj].hostname);
+								if (reserved_list[jj].port)
+									free(reserved_list[jj].port);
+								if (reserved_list[jj].delete_queue_name)
+									free(reserved_list[jj].delete_queue_name);
+								if (reserved_list[jj].status)
+									free(reserved_list[jj].status);
+								if (reserved_list[jj].pid)
+									free(reserved_list[jj].pid);
 							}
 							free(reserved_list);
 
@@ -6571,8 +6575,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 							worker_struct *avail_list = NULL;
 							list_len = 0;
 							if (avail_workers > 0) {
-								if (oph_get_workers_list_by_query_status (&avail_list, &list_len,
-										"SELECT * FROM worker WHERE status=\"down\";")) {
+								if (oph_get_workers_list_by_query_status(&avail_list, &list_len, "SELECT * FROM worker WHERE status=\"down\";")) {
 									pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Number of available workers cannot be retrieved\n");
 									snprintf(error_message, OPH_MAX_STRING_SIZE, "Unable to retrieve number of available workers!");
 									break;
@@ -6767,7 +6770,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 									}
 
 									if (oph_json_add_grid
-										(oper_json, OPH_JSON_OBJKEY_CLUSTER_LIST, "\nAvailable workers", NULL, jsonkeys, num_fields, fieldtypes, num_fields)) {
+									    (oper_json, OPH_JSON_OBJKEY_CLUSTER_LIST, "\nAvailable workers", NULL, jsonkeys, num_fields, fieldtypes, num_fields)) {
 										pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "ADD GRID error\n");
 										for (iii = 0; iii < num_fields; iii++)
 											if (jsonkeys[iii])
@@ -6794,13 +6797,12 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 
 									success = 2;
 								}
-
 								// Data
 								if (success == 2)
 									success = 0;
 								if (!success) {
 									int ii;
-									for (ii=0; ii < list_len; ii++) {
+									for (ii = 0; ii < list_len; ii++) {
 										jsonvalues = (char **) malloc(sizeof(char *) * num_fields);
 										if (!jsonvalues) {
 											pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error allocating memory\n");
@@ -6897,13 +6899,19 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 								}
 							}
 
-							for (jj=0; jj < list_len; jj++) {
-								if (avail_list[jj].id_worker) free(avail_list[jj].id_worker);
-								if (avail_list[jj].hostname) free(avail_list[jj].hostname);
-								if (avail_list[jj].port) free(avail_list[jj].port);
-								if (avail_list[jj].delete_queue_name) free(avail_list[jj].delete_queue_name);
-								if (avail_list[jj].status) free(avail_list[jj].status);
-								if (avail_list[jj].pid) free(avail_list[jj].pid);
+							for (jj = 0; jj < list_len; jj++) {
+								if (avail_list[jj].id_worker)
+									free(avail_list[jj].id_worker);
+								if (avail_list[jj].hostname)
+									free(avail_list[jj].hostname);
+								if (avail_list[jj].port)
+									free(avail_list[jj].port);
+								if (avail_list[jj].delete_queue_name)
+									free(avail_list[jj].delete_queue_name);
+								if (avail_list[jj].status)
+									free(avail_list[jj].status);
+								if (avail_list[jj].pid)
+									free(avail_list[jj].pid);
 							}
 							free(avail_list);
 
@@ -6941,7 +6949,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 								}
 
 								int ii;
-								for (ii=1; ii<=n_workers; ii++) {
+								for (ii = 1; ii <= n_workers; ii++) {
 									char *cmd = NULL;
 									if (oph_form_subm_string(command, 0, outfile, 0, orm, idjob, os_username, project, wid, &cmd, 3)) {
 										pmesg_safe(&global_flag, LOG_ERROR, __FILE__, __LINE__, "Error on forming submission string\n");
@@ -6961,7 +6969,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 									pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "Submitting command: %s\n", cmd);
 
 									success = !system(cmd);
-									if(success) {
+									if (success) {
 										snprintf(error_message, OPH_MAX_STRING_SIZE, "Worker correctly deployed");
 										pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%s\n", error_message);
 									} else {
@@ -6973,7 +6981,7 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 								}
 							} else {
 								snprintf(error_message, OPH_MAX_STRING_SIZE, "Eccessive workers number: only %d worker%s "
-									"available", atoi(max_workers) - reserved_workers, atoi(max_workers) - reserved_workers == 1 ? " is" : "s are");
+									 "available", atoi(max_workers) - reserved_workers, atoi(max_workers) - reserved_workers == 1 ? " is" : "s are");
 								break;
 							}
 
@@ -7009,14 +7017,15 @@ int oph_serve_management_operator(struct oph_plugin_data *state, const char *req
 											if (oph_subm_user && strcasecmp(os_username, oph_subm_user)) {
 												snprintf(outfile, OPH_MAX_STRING_SIZE, "%s/%s", oph_txt_location, os_username);
 												oph_mkdir(outfile);
-												snprintf(outfile, OPH_MAX_STRING_SIZE, "%s/" OPH_TXT_FILENAME, oph_txt_location, os_username, code, markerid);
+												snprintf(outfile, OPH_MAX_STRING_SIZE, "%s/" OPH_TXT_FILENAME, oph_txt_location, os_username, code,
+													 markerid);
 											} else
 												snprintf(outfile, OPH_MAX_STRING_SIZE, OPH_TXT_FILENAME, oph_txt_location, code, markerid);
 										}
 									}
 
 									success = !oph_undeploy_workers(n_workers);
-									if(success) {
+									if (success) {
 										snprintf(error_message, OPH_MAX_STRING_SIZE, "Worker correctly undeployed");
 										pmesg_safe(&global_flag, LOG_DEBUG, __FILE__, __LINE__, "%s\n", error_message);
 									} else {

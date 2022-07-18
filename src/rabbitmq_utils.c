@@ -243,23 +243,23 @@ int split_by_delimiter(char *message, char delimiter, int n_chars, char **result
 	int ii, n_ch = 0;
 
 	for (ii = 0; ii < len; ii++) {
-		if (*(message+ii) == DOUBLE_QUOTE) {
+		if (*(message + ii) == DOUBLE_QUOTE) {
 			if (doubleQuotes_count > 0)
-				doubleQuotes_count --;
+				doubleQuotes_count--;
 			else
-				doubleQuotes_count ++;
-		} else if (*(message+ii) == SINGLE_QUOTE) {
+				doubleQuotes_count++;
+		} else if (*(message + ii) == SINGLE_QUOTE) {
 			if (singleQuotes_count > 0)
-				singleQuotes_count --;
+				singleQuotes_count--;
 			else
-				singleQuotes_count ++;
+				singleQuotes_count++;
 		}
 
 		if (singleQuotes_count || doubleQuotes_count)
 			continue;
 
-		if (*(message+ii) == delimiter)
-			n_ch ++;
+		if (*(message + ii) == delimiter)
+			n_ch++;
 		else {
 			n_ch = 0;
 			continue;

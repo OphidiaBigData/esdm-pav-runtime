@@ -103,7 +103,7 @@ int oph_is_detached_task(int id);
 int oph_remove_detached_task(int id);
 
 int oph_get_workers_number_by_status(int *workers_number, char *status);
-int oph_get_workers_list_by_query_status (worker_struct **out_list, int *len, char *query);
-int oph_undeploy_workers (int w_number);
+int oph_get_workers_list_by_query_status(worker_struct ** out_list, int *len, char *query);
+int oph_undeploy_workers(int w_number);
 
 #endif				/* OPH_RMANAGER_H */
