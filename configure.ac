@@ -190,7 +190,7 @@ AC_SUBST(VOMS)
 #Set VOMS libs path
 AC_ARG_WITH(voms-libs, [  --with-voms-libs=VOMS_LIBS       Sets the VOMS libraries path], [ VOMS_LIBS="$withval" ] )
 if test -z "$VOMS_LIBS" && test $voms_enable = 1; then
-        AC_MSG_ERROR([no VOMS libraries directory found])
+	AC_MSG_ERROR([no VOMS libraries directory found])
 else
 	AC_MSG_NOTICE([VOMS libraries directory: $VOMS_LIBS])
 	VOMS_DEFINE="GLITE_VOMS"
@@ -201,7 +201,7 @@ AC_SUBST(VOMS_DEFINE)
 #Set VOMS include path
 AC_ARG_WITH(voms-include, [  --with-voms-include=VOMS_INCLUDE       Sets the VOMS include path], [  VOMS_INCLUDE="$withval" ] )
 if test -z "$VOMS_INCLUDE" && test $voms_enable = 1; then
-        AC_MSG_ERROR([no VOMS include directory found])
+	AC_MSG_ERROR([no VOMS include directory found])
 else
 	AC_MSG_NOTICE([VOMS includes: $VOMS_INCLUDE])
 fi
@@ -311,7 +311,7 @@ AC_ARG_WITH(libxml_header_path,
 AC_ARG_WITH(libxml_lib_path,
 	   [  --with-libxml-lib-path=PATH 		Location of libxml2.a],
 	   [
-		libxml_lib_path="-L$withval"
+		libxml_lib_path="-L$withval -lxml2"
 	   ],
 	   [
 		libxml_lib_path="$XML_LIBS"
@@ -334,7 +334,7 @@ AC_ARG_WITH(libcurl_header_path,
 AC_ARG_WITH(libcurl_lib_path,
 	   [  --with-libcurl-lib-path=PATH 		Location of libcurl.a],
 	   [
-		libcurl_lib_path="-L$withval"
+		libcurl_lib_path="-L$withval -lcurl"
 	   ],
 	   [
 		libcurl_lib_path="$CURL_LIBS"
@@ -357,7 +357,7 @@ AC_ARG_WITH(libopenssl_header_path,
 AC_ARG_WITH(libopenssl_lib_path,
 	   [  --with-libopenssl-lib-path=PATH 		Location of openssl],
 	   [
-		libopenssl_lib_path="-L$withval"
+		libopenssl_lib_path="-L$withval -lssl -lcrypto"
 	   ],
  	   [
 		libopenssl_lib_path="$OPENSSL_LIBS"
@@ -389,7 +389,7 @@ AC_ARG_WITH(libssh2_header_path,
 AC_ARG_WITH(libssh2_lib_path,
 	   [  --with-libssh2-lib-path=PATH 		Location of libssh2],
 	   [
-		libssh2_lib_path="-L$withval"
+		libssh2_lib_path="-L$withval -lssh2"
 	   ],
      [
     libssh2_lib_path="$SSH2_LIBS"
@@ -405,22 +405,18 @@ SOAPCPP2_PROG=
 AC_ARG_WITH(soapcpp2_path,
            [  --with-soapcpp2-path=PATH  Set the soapcpp2 root dir],
            [
-                soapcpp2_path="$withval"
-		have_soapcpp2=yes
-		SOAPCPP2_PROG="${withval}/bin/soapcpp2"
+				soapcpp2_path="$withval"
+				have_soapcpp2=yes
+				SOAPCPP2_PROG="${withval}/bin/soapcpp2"
            ],
            [
-                AC_PATH_PROG([SOAPCPP2_PROG], soapcpp2)
-			          if test -n "$SOAPCPP2_PROG" ; then
-				          have_soapcpp2=yes
-              	fi
+				AC_PATH_PROG([SOAPCPP2_PROG], soapcpp2)
+				if test -n "$SOAPCPP2_PROG" ; then
+					have_soapcpp2=yes
+				fi
            ]
            )
-if test "x${have_soapcpp2}" = "xyes"; then
-	AC_MSG_NOTICE([SoapCPP2 available.])
-else
-	AC_MSG_NOTICE([SoapCPP2 not found!])
-fi
+AM_CONDITIONAL([MAKE_WSDL], [test "x${have_soapcpp2}" = "xyes"])
 
 PKG_CHECK_MODULES(JANSSON, jansson >= 2.3)
 AC_ARG_WITH(jansson_header_path,
@@ -434,7 +430,7 @@ AC_ARG_WITH(jansson_header_path,
 AC_ARG_WITH(jansson_lib_path,
        [  --with-jansson-lib-path=PATH       Location of jansson lib],
        [
-        jansson_lib_path="-L$withval"
+        jansson_lib_path="-L$withval -ljansson"
        ],
      [
     jansson_lib_path="$JANSSON_LIBS"
