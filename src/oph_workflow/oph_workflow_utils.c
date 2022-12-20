@@ -27,7 +27,7 @@
 #include "debug.h"
 #include "oph_auth.h"
 
-int oph_workflow_get_argument_size(oph_workflow * workflow, int task_index, size_t *max)
+int oph_workflow_get_argument_size(oph_workflow * workflow, int task_index, size_t * max)
 {
 	if (!workflow || !max)
 		return OPH_WORKFLOW_EXIT_GENERIC_ERROR;
@@ -182,7 +182,7 @@ int oph_workflow_var_substitute(oph_workflow * workflow, int task_index, int lig
 			return_error = -1;
 		else if (workflow->tasks[task_index].vars && ((var = hashtbl_get(workflow->tasks[task_index].vars, key))))
 			return_error = 0;
-		else if (workflow->vars && ((var = hashtbl_get(workflow->vars, key))) && oph_workflow_is_child_of(workflow, var->caller, task_index))
+		else if (workflow->vars && ((var = hashtbl_get(workflow->vars, key))) && ((var->caller < 0) || oph_workflow_is_child_of(workflow, var->caller, task_index)))
 			return_error = 0;
 		else {
 			char *current_arg = NULL;
@@ -346,22 +346,38 @@ int oph_workflow_get_submission_string(oph_workflow * workflow, int task_index, 
 		return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
 	}
 
+	int n = subtask ? workflow->tasks[task_index].light_tasks[light_task_index].arguments_num : workflow->tasks[task_index].arguments_num;
+
 	if (workflow->host_partition) {
-		snprintf(key_value, OPH_WORKFLOW_MAX_STRING, OPH_WORKFLOW_KEY_VALUE_STRING, OPH_WORKFLOW_KEY_HOST_PARTITION, workflow->host_partition);
-		if (oph_workflow_strcat(&long_submit_string, key_value)) {
-			pmesg(LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
-			if (long_submit_string)
-				free(long_submit_string);
-			return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+		for (j = 0; j < n; ++j) {
+			key = subtask ? workflow->tasks[task_index].light_tasks[light_task_index].arguments_keys[j] : workflow->tasks[task_index].arguments_keys[j];
+			if (!strcmp(key, OPH_WORKFLOW_KEY_HOST_PARTITION))
+				break;
+		}
+		if (j >= n) {
+			snprintf(key_value, OPH_WORKFLOW_MAX_STRING, OPH_WORKFLOW_KEY_VALUE_STRING, OPH_WORKFLOW_KEY_HOST_PARTITION, workflow->host_partition);
+			if (oph_workflow_strcat(&long_submit_string, key_value)) {
+				pmesg(LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
+				if (long_submit_string)
+					free(long_submit_string);
+				return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+			}
 		}
 	}
 	if (workflow->nhosts) {
-		snprintf(key_value, OPH_WORKFLOW_MAX_STRING, OPH_WORKFLOW_KEY_VALUE_STRING3, OPH_WORKFLOW_KEY_NHOSTS, workflow->nhosts);
-		if (oph_workflow_strcat(&long_submit_string, key_value)) {
-			pmesg(LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
-			if (long_submit_string)
-				free(long_submit_string);
-			return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+		for (j = 0; j < n; ++j) {
+			key = subtask ? workflow->tasks[task_index].light_tasks[light_task_index].arguments_keys[j] : workflow->tasks[task_index].arguments_keys[j];
+			if (!strcmp(key, OPH_WORKFLOW_KEY_NHOSTS))
+				break;
+		}
+		if (j >= n) {
+			snprintf(key_value, OPH_WORKFLOW_MAX_STRING, OPH_WORKFLOW_KEY_VALUE_STRING3, OPH_WORKFLOW_KEY_NHOSTS, workflow->nhosts);
+			if (oph_workflow_strcat(&long_submit_string, key_value)) {
+				pmesg(LOG_ERROR, __FILE__, __LINE__, "Memory error\n");
+				if (long_submit_string)
+					free(long_submit_string);
+				return OPH_WORKFLOW_EXIT_MEMORY_ERROR;
+			}
 		}
 	}
 
@@ -376,7 +392,7 @@ int oph_workflow_get_submission_string(oph_workflow * workflow, int task_index, 
 		}
 	}
 
-	for (j = 0; j < (subtask ? workflow->tasks[task_index].light_tasks[light_task_index].arguments_num : workflow->tasks[task_index].arguments_num); ++j) {
+	for (j = 0; j < n; ++j) {
 		key = subtask ? workflow->tasks[task_index].light_tasks[light_task_index].arguments_keys[j] : workflow->tasks[task_index].arguments_keys[j];
 		value = value2 = subtask ? workflow->tasks[task_index].light_tasks[light_task_index].arguments_values[j] : workflow->tasks[task_index].arguments_values[j];
 		if (key && value && strlen(key) && strlen(value)) {
