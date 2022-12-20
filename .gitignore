@@ -57,3 +57,4 @@ ophidiadb
 *.sif
 conf117672*
 deploy_pav_worker_*
+.dirstamp

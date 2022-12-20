@@ -1,6 +1,10 @@
 
 ## v1.4.0 - 2021-12-22
 
+### Fixed:
+
+- Bug in parsing for comments in JSON Requests
+
 ### Added:
 
 - Client to start and stop worker processes on HPC systems in multi-node setup
