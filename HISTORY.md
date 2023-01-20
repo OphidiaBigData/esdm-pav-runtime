@@ -7,13 +7,10 @@
 
 ### Added:
 
-- Client to start and stop worker processes on HPC systems in multi-node setup
-- Scripts for initializing configuration and running the executables
-- Support for ESDM-based wait flow control operator
-- Support for experiment execution checkpointing
-- Support for task execution retry based on backoff
-- Support for task execution cancellation
-- Support for worker processes status tracking in multi-node setup
+- Possibility to create one branch for each file of a folder with parallel OPH_FOR [#63](https://github.com/OphidiaBigData/ophidia-server/pull/63)
+- Submission control to limit the number of running tasks or busy cores [#62](https://github.com/OphidiaBigData/ophidia-server/pull/62)
+- Simple scripts to generate digital certificates
+- Workflow variable indicating the number of loops of a 'OPH_FOR' statement
 
 ### Changed:
 
