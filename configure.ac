@@ -1,6 +1,6 @@
 #
 #    ESDM-PAV Runtime
-#    Copyright (C) 2021
+#    Copyright (C) 2022
 #
 #
 #    Ophidia Server
@@ -21,7 +21,7 @@
 #
 
 AC_PREREQ([2.60])
-AC_INIT([esdm-pav-runtime], [1.4.0], [ophidia-info@cmcc.it])
+AC_INIT([esdm-pav-runtime], [1.6.0], [ophidia-info@cmcc.it])
 AC_CONFIG_SRCDIR([src])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_AUX_DIR([config])

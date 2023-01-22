@@ -1,4 +1,25 @@
 
+## v1.6.0 - 2023-01-22
+
+### Fixed:
+
+- Bugs in unit tests
+- Minor bugs
+
+### Added:
+
+- Options 'src_path' and 'input' to operator OPH_FOR
+- Support for CentOS9
+- Operator OPH_LOGGINGBK
+- Support for SLURM and LSF to task scheduler
+
+### Changed:
+
+- Use task name in job name at resource manager level
+- Requirements for librabbitmq
+- Scripts to start, stop and check tasks
+- Operator OPH_PAV_WORKER to get information and to monitor the workers
+
 ## v1.4.0 - 2021-12-22
 
 ### Fixed:
