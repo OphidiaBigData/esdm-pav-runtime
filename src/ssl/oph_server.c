@@ -71,6 +71,7 @@ pthread_mutex_t service_flag;
 pthread_mutex_t savefile_flag;
 pthread_cond_t termination_flag;
 pthread_cond_t waiting_flag;
+pthread_cond_t limit_flag;
 #ifdef OPH_OPENID_SUPPORT
 pthread_t token_tid_openid = 0;
 #endif
@@ -119,6 +120,10 @@ char *oph_xml_operator_dir = 0;
 char *oph_user_notifier = 0;
 unsigned int oph_server_farm_size = 0;
 unsigned int oph_server_queue_size = 0;
+unsigned int oph_server_task_limit = 0;
+unsigned int oph_server_core_limit = 0;
+unsigned int oph_server_task_running = 0;
+unsigned int oph_server_core_running = 0;
 unsigned int oph_auto_retry = 0;
 unsigned int oph_server_poll_time = OPH_SERVER_POLL_TIME;
 oph_rmanager *orm = 0;
@@ -243,6 +248,10 @@ int set_global_values(const char *configuration_file)
 		oph_server_farm_size = (unsigned int) strtol(value, NULL, 10);
 	if ((value = hashtbl_get(oph_server_params, OPH_SERVER_CONF_QUEUE_SIZE)))
 		oph_server_queue_size = (unsigned int) strtol(value, NULL, 10);
+	if ((value = hashtbl_get(oph_server_params, OPH_SERVER_CONF_TASK_LIMIT)))
+		oph_server_task_limit = (unsigned int) strtol(value, NULL, 10);
+	if ((value = hashtbl_get(oph_server_params, OPH_SERVER_CONF_CORE_LIMIT)))
+		oph_server_core_limit = (unsigned int) strtol(value, NULL, 10);
 	if ((value = hashtbl_get(oph_server_params, OPH_SERVER_CONF_AUTO_RETRY)))
 		oph_auto_retry = (unsigned int) strtol(value, NULL, 10);
 	if ((value = hashtbl_get(oph_server_params, OPH_SERVER_CONF_POLL_TIME)))
@@ -536,6 +545,7 @@ void cleanup()
 	pthread_mutex_destroy(&savefile_flag);
 	pthread_cond_destroy(&termination_flag);
 	pthread_cond_destroy(&waiting_flag);
+	pthread_cond_destroy(&limit_flag);
 
 #if defined(MULTI_NODE_SUPPORT)
 	pthread_mutex_destroy(&rabbitmq_flag);
@@ -562,6 +572,7 @@ int main(int argc, char *argv[])
 	pthread_mutex_init(&savefile_flag, NULL);
 	pthread_cond_init(&termination_flag, NULL);
 	pthread_cond_init(&waiting_flag, NULL);
+	pthread_cond_init(&limit_flag, NULL);
 
 #if defined(MULTI_NODE_SUPPORT) && !defined(MULTI_RABBITMQ_CONN_SUPPORT)
 	pthread_mutex_init(&rabbitmq_flag, NULL);
